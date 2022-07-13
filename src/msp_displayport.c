@@ -460,12 +460,12 @@ uint8_t get_tx_data_osd(uint8_t index) //prepare osd+data to VTX
     
     }
     */
-    uint8_t mask[7] = {0};
+    __pdata uint8_t mask[7] = {0};
     uint8_t i,t1;
     uint8_t ptr;
     uint8_t hmax;
     uint8_t len_mask;
-    uint8_t page[7] = {0};
+    __pdata uint8_t page[7] = {0};
     uint8_t page_byte = 0;
     uint8_t num = 0;
     
@@ -1315,7 +1315,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
                 cms_cnt = 0;
                 disp_mode = DISPLAY_CMS;
                 clear_screen();
-                camMenuInit();
+                //camMenuInit();
                 cms_state = CMS_CAM;
             }
             break;
@@ -1328,7 +1328,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
             else
                 cms_cnt = 0;
             
-            if(camStatusUpdate(VirtualBtn) || (cms_cnt==10)){
+            if(/*camStatusUpdate(VirtualBtn) ||*/ (cms_cnt==10)){
                 disp_mode = DISPLAY_OSD;
                 cms_state = CMS_OSD;
                 fc_init();
