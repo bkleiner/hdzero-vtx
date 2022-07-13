@@ -33,7 +33,7 @@ def encrypt(source, target, env):
         for sourceByte in file.read():
             byteArr.append(byteMap[sourceByte])
 
-    dest_name = env.subst("$BUILD_DIR/${PROGNAME}.packed.bin")
+    dest_name = env.subst("$BUILD_DIR/HDZERO_TX.bin")
     with open(dest_name, "wb") as file:
         file.write(bytearray(byteArr))
 
