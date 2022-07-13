@@ -10,7 +10,7 @@
 
 #define VERSION 0x41
 #define BETA 0x03
-#define VTX_L
+//#define VTX_L
 //#define VTX_WL
 //#define VTX_S
 //#define VTX_R
