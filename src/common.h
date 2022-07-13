@@ -1,6 +1,6 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
-#include <stdint.h>
+#include "stdint.h"
 #include <string.h>
 #include "sfr_def.h"
 #include "sfr_ext.h"
