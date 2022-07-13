@@ -1,6 +1,8 @@
 #ifndef _MONITOR_H_
 #define _MONITOR_H_
 
+#include "toolchain.h"
+
 #define MAX_CMD_LEN     30
 #define Prompt()        Printf("\r\nDM568X>")		
 

@@ -3,6 +3,10 @@
 
 #ifdef SDCC
 
+#include <8051.h>
+#include <mcs51reg.h>
+#include <mcs51/msc1210.h>
+
 #define IDATA_SEG __idata
 #define XDATA_SEG __xdata
 #define CODE_SEG __code

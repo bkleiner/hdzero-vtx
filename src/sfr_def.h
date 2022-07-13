@@ -69,6 +69,7 @@ SFR_DEF(EIP,       0xF8);
 ////////////////////////////////////////////////////////////////////////////////
 // Bit define
 
+#ifndef SDCC
 /*  P0  */
 SBIT_DEF(P0_7,     P0^7);
 SBIT_DEF(P0_6,     P0^6);
@@ -164,5 +165,7 @@ SBIT_DEF(RI1,      SCON1^0);
 //SBIT_DEF(INT4F,    EIF^2);
 //SBIT_DEF(INT3F,    EIF^1);
 //SBIT_DEF(INT2F,    EIF^0);
+
+#endif
 
 #endif
