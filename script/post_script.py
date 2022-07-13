@@ -1,5 +1,7 @@
 Import("env")
 
+
+# hdzero "encryption" as figured out by Peter Peiser https://github.com/pjpei
 bitFlipDictionary = {
     0x01: 0x80,
     0x02: 0x04,
