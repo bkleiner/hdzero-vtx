@@ -1,8 +1,8 @@
 Import("env")
 
+SDCC_OPTS = ["--model-large", "--opt-code-speed", "--no-pack-iram"]
+
 env.Append(
-    CFLAGS=["--model-large", "--opt-code-speed",
-            "--stack-auto", "--fomit-frame-pointer"],
-    LINKFLAGS=["--model-large", "--opt-code-speed", "--stack-auto",
-               "--xram-loc", "0x0001", "--code-loc", "0x0"]
+    CFLAGS=SDCC_OPTS,
+    LINKFLAGS=SDCC_OPTS
 )
