@@ -3,3 +3,7 @@
 /src/Listings
 /src/dm5680_fw_tx.uvgui.*
 /src/*.BAT
+build/*
+VTX_*.lk
+VTX_*.map
+VTX_*.mem
