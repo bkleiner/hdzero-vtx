@@ -1,3 +1,6 @@
+/.pio
+/.vscode
+
 build/*
 VTX_*.lk
 VTX_*.map
