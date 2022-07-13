@@ -8,13 +8,13 @@ uint16_t global_value;
 #ifdef _DEBUG_MODE
 void DoPrint( const char CODE_P *fmt, va_list ap )
 {
-	char  ch;
-	char  i;
-	long  value;
-	bit   fl_zero;
-	bit   fl_num;
-	uint8_t  fl_len;
-	uint8_t  cnt;
+    char ch;
+    char i;
+    long value;
+    __bit fl_zero;
+    __bit fl_num;
+    uint8_t fl_len;
+    uint8_t cnt;
   char *ptr;
 	uint32_t mask=1;
   uint8_t	Hex[17] = "0123456789ABCDEF";

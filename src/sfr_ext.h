@@ -1,12 +1,12 @@
 #ifndef __SFR_EXT_H_
 #define __SFR_EXT_H_
 
-sfr SFR_CMD     = 0xB9;
-sfr SFR_DATA    = 0xBA;
-sfr SFR_ADDRL   = 0xBB;
-sfr SFR_ADDRH   = 0xBC;
-sfr SFR_BUSY    = 0xBD;
-sfr DBG_PIN0    = 0xFB;
+__sfr __at (0xB9) SFR_CMD;
+__sfr __at (0xBA) SFR_DATA;
+__sfr __at (0xBB) SFR_ADDRL;
+__sfr __at (0xBC) SFR_ADDRH;
+__sfr __at (0xBD) SFR_BUSY;
+__sfr __at (0xFB) DBG_PIN0;
 
 void WriteReg(uint8_t page, uint8_t addr, uint8_t dat);
 uint8_t ReadReg(uint8_t page, uint8_t addr);

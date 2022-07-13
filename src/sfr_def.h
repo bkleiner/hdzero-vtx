@@ -4,157 +4,157 @@
 ////////////////////////////////////////////////////////////////////////////////
 // SFR
 
-sfr P0        = 0x80;   /* Port 0                    */
-sfr SP        = 0x81;   /* Stack Pointer             */
-sfr DPL0      = 0x82;   /* Data Pointer 0 Low byte   */
-sfr DPH0      = 0x83;   /* Data Pointer 0 High byte  */
-sfr DPL1      = 0x84;   /* Data Pointer 1 Low byte   */
-sfr DPH1      = 0x85;   /* Data Pointer 1 High byte  */
-sfr DPS       = 0x86;
-sfr PCON      = 0x87;   /* Power Configuration       */
+__sfr __at (0x80) P0;/* Port 0                    */
+__sfr __at (0x81) SP;/* Stack Pointer             */
+__sfr __at (0x82) DPL0;/* Data Pointer 0 Low byte   */
+__sfr __at (0x83) DPH0;/* Data Pointer 0 High byte  */
+__sfr __at (0x84) DPL1;/* Data Pointer 1 Low byte   */
+__sfr __at (0x85) DPH1;/* Data Pointer 1 High byte  */
+__sfr __at (0x86) DPS;
+__sfr __at (0x87) PCON;/* Power Configuration       */
 
-sfr TCON      = 0x88;   /* Timer 0,1 Configuration   */
-sfr TMOD      = 0x89;   /* Timer 0,1 Mode            */
-sfr TL0       = 0x8A;   /* Timer 0 Low byte counter  */
-sfr TL1       = 0x8B;   /* Timer 1 Low byte counter  */
-sfr TH0       = 0x8C;   /* Timer 0 High byte counter */
-sfr TH1       = 0x8D;   /* Timer 1 High byte counter */
-sfr CKCON     = 0x8E;   /* XDATA Wait States         */
+__sfr __at (0x88) TCON;/* Timer 0,1 Configuration   */
+__sfr __at (0x89) TMOD;/* Timer 0,1 Mode            */
+__sfr __at (0x8A) TL0;/* Timer 0 Low byte counter  */
+__sfr __at (0x8B) TL1;/* Timer 1 Low byte counter  */
+__sfr __at (0x8C) TH0;/* Timer 0 High byte counter */
+__sfr __at (0x8D) TH1;/* Timer 1 High byte counter */
+__sfr __at (0x8E) CKCON;/* XDATA Wait States         */
 
-sfr P1        = 0x90;   /* Port 1                    */
-sfr EIF       = 0x91;
-sfr WTST      = 0x92;   /* Program Wait States       */
-sfr DPX0      = 0x93;   /* Data Page Pointer 0       */
-sfr DPX1      = 0x95;   /* Data Page Pointer 1       */
+__sfr __at (0x90) P1;/* Port 1                    */
+__sfr __at (0x91) EIF;
+__sfr __at (0x92) WTST;/* Program Wait States       */
+__sfr __at (0x93) DPX0;/* Data Page Pointer 0       */
+__sfr __at (0x95) DPX1;/* Data Page Pointer 1       */
 
-sfr SCON0     = 0x98;   /* Serial 0 Configuration    */
-sfr SBUF0     = 0x99;   /* Serial 0 I/O Buffer       */
+__sfr __at (0x98) SCON0;/* Serial 0 Configuration    */
+__sfr __at (0x99) SBUF0;/* Serial 0 I/O Buffer       */
 
-sfr P2        = 0xA0;   /* Port 2                    */
+__sfr __at (0xA0) P2;/* Port 2                    */
 
-sfr IE        = 0xA8;   /* Interrupt Enable          */
+__sfr __at (0xA8) IE;/* Interrupt Enable          */
 
-sfr P3        = 0xB0;   /* Port 3                    */
+__sfr __at (0xB0) P3;/* Port 3                    */
 
-sfr IP        = 0xB8;
+__sfr __at (0xB8) IP;
 
-sfr SCON1     = 0xC0;   /* Serial 1 Configuration    */
-sfr SBUF1     = 0xC1;   /* Serial 1 I/O Buffer       */
+__sfr __at (0xC0) SCON1;/* Serial 1 Configuration    */
+__sfr __at (0xC1) SBUF1;/* Serial 1 I/O Buffer       */
 
-sfr T2CON     = 0xC8;
-sfr T2IF      = 0xC9;
-sfr RLDL      = 0xCA;
-sfr RLDH      = 0xCB;
-sfr TL2       = 0xCC;
-sfr TH2       = 0xCD;
-sfr CCEN      = 0xCE;
+__sfr __at (0xC8) T2CON;
+__sfr __at (0xC9) T2IF;
+__sfr __at (0xCA) RLDL;
+__sfr __at (0xCB) RLDH;
+__sfr __at (0xCC) TL2;
+__sfr __at (0xCD) TH2;
+__sfr __at (0xCE) CCEN;
 
-sfr PSW       = 0xD0;   /* Program Status Word       */
+__sfr __at (0xD0) PSW;/* Program Status Word       */
 
-sfr WDCON     = 0xD8;
+__sfr __at (0xD8) WDCON;
 
-sfr ACC       = 0xE0;   /* Accumulator               */
+__sfr __at (0xE0) ACC;/* Accumulator               */
 
-sfr EIE       = 0xE8;   /* External Interrupt Enable */
-sfr STATUS    = 0xE9;   /* Status register           */
-sfr MXAX      = 0xEA;   /* MOVX @Ri High address     */
-sfr TA        = 0xEB;
+__sfr __at (0xE8) EIE;/* External Interrupt Enable */
+__sfr __at (0xE9) STATUS;/* Status register           */
+__sfr __at (0xEA) MXAX;/* MOVX @Ri High address     */
+__sfr __at (0xEB) TA;
 
-sfr B         = 0xF0;   /* B Working register        */
+__sfr __at (0xF0) B;/* B Working register        */
 
-sfr EIP       = 0xF8;
+__sfr __at (0xF8) EIP;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Bit define
 
 /*  P0  */
-sbit P0_7     = P0^7;
-sbit P0_6     = P0^6;
-sbit P0_5     = P0^5;
-sbit P0_4     = P0^4;
-sbit P0_3     = P0^3;
-sbit P0_2     = P0^2;
-sbit P0_1     = P0^1;
-sbit P0_0     = P0^0;
+__sbit __at (0x80+7) P0_7;
+__sbit __at (0x80+6) P0_6;
+__sbit __at (0x80+5) P0_5;
+__sbit __at (0x80+4) P0_4;
+__sbit __at (0x80+3) P0_3;
+__sbit __at (0x80+2) P0_2;
+__sbit __at (0x80+1) P0_1;
+__sbit __at (0x80+0) P0_0;
 
 /*  P1  */
-sbit P1_7     = P1^7;
-sbit P1_6     = P1^6;
-sbit P1_5     = P1^5;
-sbit P1_4     = P1^4;
-sbit P1_3     = P1^3;
-sbit P1_2     = P1^2;
-sbit P1_1     = P1^1;
-sbit P1_0     = P1^0;
+__sbit __at (0x90+7) P1_7;
+__sbit __at (0x90+6) P1_6;
+__sbit __at (0x90+5) P1_5;
+__sbit __at (0x90+4) P1_4;
+__sbit __at (0x90+3) P1_3;
+__sbit __at (0x90+2) P1_2;
+__sbit __at (0x90+1) P1_1;
+__sbit __at (0x90+0) P1_0;
 
 /*  P2  */
-sbit P2_7     = P2^7;
-sbit P2_6     = P2^6;
-sbit P2_5     = P2^5;
-sbit P2_4     = P2^4;
-sbit P2_3     = P2^3;
-sbit P2_2     = P2^2;
-sbit P2_1     = P2^1;
-sbit P2_0     = P2^0;
+__sbit __at (0xA0+7) P2_7;
+__sbit __at (0xA0+6) P2_6;
+__sbit __at (0xA0+5) P2_5;
+__sbit __at (0xA0+4) P2_4;
+__sbit __at (0xA0+3) P2_3;
+__sbit __at (0xA0+2) P2_2;
+__sbit __at (0xA0+1) P2_1;
+__sbit __at (0xA0+0) P2_0;
 
 /*  P3  */
-sbit P3_7     = P3^7;
-sbit P3_6     = P3^6;
-sbit P3_5     = P3^5;
-sbit P3_4     = P3^4;
-sbit P3_3     = P3^3;
-sbit P3_2     = P3^2;
-sbit P3_1     = P3^1;
-sbit P3_0     = P3^0;
+__sbit __at (0xB0+7) P3_7;
+__sbit __at (0xB0+6) P3_6;
+__sbit __at (0xB0+5) P3_5;
+__sbit __at (0xB0+4) P3_4;
+__sbit __at (0xB0+3) P3_3;
+__sbit __at (0xB0+2) P3_2;
+__sbit __at (0xB0+1) P3_1;
+__sbit __at (0xB0+0) P3_0;
 
 /*  TCON  */
-sbit TF1      = TCON^7;
-sbit TR1      = TCON^6;
-sbit TF0      = TCON^5;
-sbit TR0      = TCON^4;
-sbit IE1      = TCON^3;
-sbit IT1      = TCON^2;
-sbit IE0      = TCON^1;
-sbit IT0      = TCON^0;
+__sbit __at (0x88+7) TF1;
+__sbit __at (0x88+6) TR1;
+__sbit __at (0x88+5) TF0;
+__sbit __at (0x88+4) TR0;
+__sbit __at (0x88+3) IE1;
+__sbit __at (0x88+2) IT1;
+__sbit __at (0x88+1) IE0;
+__sbit __at (0x88+0) IT0;
 
 /*  IE  */
-sbit EA       = IE^7;
-sbit ES1      = IE^6;
-sbit ET2      = IE^5;
-sbit ES0      = IE^4;
-sbit ET1      = IE^3;
-sbit EX1      = IE^2;
-sbit ET0      = IE^1;
-sbit EX0      = IE^0;
+__sbit __at (0xA8+7) EA;
+__sbit __at (0xA8+6) ES1;
+__sbit __at (0xA8+5) ET2;
+__sbit __at (0xA8+4) ES0;
+__sbit __at (0xA8+3) ET1;
+__sbit __at (0xA8+2) EX1;
+__sbit __at (0xA8+1) ET0;
+__sbit __at (0xA8+0) EX0;
 
 /*  IP  */
-sbit PS1      = IP^6;
-sbit PT2      = IP^5;
-sbit PS0      = IP^4;
-sbit PT1      = IP^3;
-sbit PX1      = IP^2;
-sbit PT0      = IP^1;
-sbit PX0      = IP^0;
+__sbit __at (0xB8+6) PS1;
+__sbit __at (0xB8+5) PT2;
+__sbit __at (0xB8+4) PS0;
+__sbit __at (0xB8+3) PT1;
+__sbit __at (0xB8+2) PX1;
+__sbit __at (0xB8+1) PT0;
+__sbit __at (0xB8+0) PX0;
 
 /*  SCON0  */
-sbit SM0      = SCON0^7;
-sbit SM1      = SCON0^6;
-sbit SM2      = SCON0^5;
-sbit REN      = SCON0^4;
-sbit TB8      = SCON0^3;
-sbit RB8      = SCON0^2;
-sbit TI       = SCON0^1;
-sbit RI       = SCON0^0;
+__sbit __at (0x98+7) SM0;
+__sbit __at (0x98+6) SM1;
+__sbit __at (0x98+5) SM2;
+__sbit __at (0x98+4) REN;
+__sbit __at (0x98+3) TB8;
+__sbit __at (0x98+2) RB8;
+__sbit __at (0x98+1) TI;
+__sbit __at (0x98+0) RI;
 
 /*  SCON1  */
-sbit SM10     = SCON1^7;
-sbit SM11     = SCON1^6;
-sbit SM12     = SCON1^5;
-sbit REN1     = SCON1^4;
-sbit TB18     = SCON1^3;
-sbit RB18     = SCON1^2;
-sbit TI1      = SCON1^1;
-sbit RI1      = SCON1^0;
+__sbit __at (0xC0+7) SM10;
+__sbit __at (0xC0+6) SM11;
+__sbit __at (0xC0+5) SM12;
+__sbit __at (0xC0+4) REN1;
+__sbit __at (0xC0+3) TB18;
+__sbit __at (0xC0+2) RB18;
+__sbit __at (0xC0+1) TI1;
+__sbit __at (0xC0+0) RI1;
 
 /*  EIF  */
 //sbit INT6F    = EIF^4;

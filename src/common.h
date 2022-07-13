@@ -14,11 +14,11 @@
 
 // system
 #define KEILC
-#define C51_XDAT xdata
-#define C51_IDAT idata
-#define C51_CODE code
-#define C51_ROM  code
-#define C51_BIT  bit
+#define C51_XDAT __xdata
+#define C51_IDAT __idata
+#define C51_CODE __code
+#define C51_ROM __code
+#define C51_BIT __bit
 #define CODE_P
 #define PDATA_P
 #define IDATA_P
