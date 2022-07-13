@@ -40,9 +40,9 @@
 #define Raceband
 #define USE_EFUSE
 #ifndef VTX_S
-#define USE_SMARTAUDIO
+// #define USE_SMARTAUDIO
 #endif
-#define INIT_VTX_TABLE
+// #define INIT_VTX_TABLE
 
 #define IS_RX 0
 

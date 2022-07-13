@@ -2,11 +2,11 @@ CC=sdcc
 RM=rm
 PACKIHX=packihx
 MAKEBIN=makebin
-TARGET?=VTX_S
+TARGET?=VTX_R
 # The chip seems to be:
 # https://www.keil.com/dd/chip/3196.htm
 # Need to find the correct configuration options to make this compile
-SDCC_OPTS:=-mmcs51 --iram-size 256 --code-size 65536 --stack-auto
+SDCC_OPTS:=-mmcs51 --iram-size 256 --code-size 65536 --model-large --opt-code-speed --no-pack-iram
 CFLAGS=$(SDCC_OPTS) -D$(TARGET)
 LDFLAGS=$(SDCC_OPTS)
 
@@ -36,13 +36,13 @@ OBJS=$(subst .c,.rel,$(OBJ_PATHS))
 all: $(TARGET).bin
 
 $(TARGET).ihx: $(OBJS)
-	$(CC) $(LDFLAGS) -o $(TARGET) $(OBJS)
+	$(CC) $(LDFLAGS) -o $(TARGET).ihx $(OBJS)
 
 %.hex: %.ihx
 	$(PACKIHX) $< > $@
 
 %.bin: %.hex
-	$(MAKEBIN) -p $< $@
+	$(MAKEBIN) -s 65536 -p $< $@
 
 $(OBJS): build/%.rel : src/%.c
 	$(CC) $(CFLAGS) -o build/ -c $<
