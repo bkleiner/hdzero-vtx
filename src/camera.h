@@ -1,6 +1,6 @@
 #ifndef __CAMERA_H_
 #define __CAMERA_H_
-#include <stdint.h>
+#include "stdint.h"
 #include "common.h"
 
 #ifdef _DEBUG_MODE
