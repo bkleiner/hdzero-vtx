@@ -201,7 +201,7 @@ void GetVtxParameter()
 {
     unsigned char __code *ptr = 0xFFE8;
     uint8_t i, j;
-    __pdata uint8_t tab[FREQ_MAX+1][POWER_MAX+1];
+    uint8_t tab[FREQ_MAX+1][POWER_MAX+1];
     uint8_t flash_vld = 1;
     uint8_t ee_vld = 1;
 

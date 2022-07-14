@@ -21,7 +21,9 @@ void uint8ToString(uint8_t dec, uint8_t* Str);
 //void Bin1Asc(int16_t i, uint8_t *string);
 
 //void Bin4Asc(int32_t i, uint8_t *string); 
-
+#ifdef Keil
 void WAIT(uint32_t ms);
-
+#else
+void WAIT(uint16_t ms);
+#endif
 #endif //_GLOBAL_H_

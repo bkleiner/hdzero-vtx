@@ -3,19 +3,20 @@
 #include "uart.h"
 #include "isr.h"
 #include "uart.h"
+#include "sfr_ext.h"
 
 
-uint8_t btn1_tflg = 0;
-uint8_t pwr_sflg = 0;    //power autoswitch flag
-uint8_t pwr_tflg = 0;
-uint8_t cfg_tflg = 0;
-uint8_t temp_tflg = 0;
-uint8_t timer_4hz = 0;
-uint8_t timer_8hz = 0;
-uint8_t timer_16hz = 0;
-uint16_t __idata timer_ms10x = 0;
-uint16_t seconds = 0;
-uint8_t RS0_ERR = 0;
+volatile uint8_t btn1_tflg = 0;
+volatile uint8_t pwr_sflg = 0;    //power autoswitch flag
+volatile uint8_t pwr_tflg = 0;
+volatile uint8_t cfg_tflg = 0;
+volatile uint8_t temp_tflg = 0;
+volatile uint8_t timer_4hz = 0;
+volatile uint8_t timer_8hz = 0;
+volatile uint8_t timer_16hz = 0;
+volatile uint16_t __idata timer_ms10x = 0;
+volatile uint16_t seconds = 0;
+volatile uint8_t RS0_ERR = 0;
 
 void CPU_init(void)
 {

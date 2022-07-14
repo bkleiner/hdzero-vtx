@@ -81,6 +81,13 @@ uint32_t Asc8Bin(uint8_t *s) // s is 8-digit hex string
 
 #endif
 
+
+
+
+
+#ifdef Keil
+#define T_COUNT(x) (( F_CPU * x / 1000000UL )-5)/5)
+
 void WAIT(uint32_t ms)
 {
     uint32_t i,j;
@@ -89,6 +96,27 @@ void WAIT(uint32_t ms)
         }
     }
 }
+#else
+static inline void _delay_cycl( uint16_t __ticks )//40 + 12 = 52 ticks total per loop for this CPU
+{
+    do {    //40 ticks total for this loop
+      __ticks--;
+    } while ( __ticks );
+}
+
+static inline void _delay_ms( uint16_t __ms )
+{
+    while ( __ms-- )
+    {
+        _delay_cycl( MS_DLY_SDCC ); //Measured manually by trial and error
+    }
+}
+
+void WAIT(uint16_t ms)
+{
+	_delay_ms(ms);
+}
+#endif
 
 void uint8ToString(uint8_t dec, uint8_t* Str)
 {

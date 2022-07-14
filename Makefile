@@ -6,7 +6,7 @@ TARGET?=VTX_R
 # The chip seems to be:
 # https://www.keil.com/dd/chip/3196.htm
 # Need to find the correct configuration options to make this compile
-SDCC_OPTS:=-mmcs51 --iram-size 256 --code-size 65536 --model-large --opt-code-speed --no-pack-iram
+SDCC_OPTS:=-mmcs51 --iram-size 256 --code-size 65536 --model-large
 CFLAGS=$(SDCC_OPTS) -D$(TARGET)
 LDFLAGS=$(SDCC_OPTS)
 

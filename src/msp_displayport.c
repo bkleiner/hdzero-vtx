@@ -460,12 +460,12 @@ uint8_t get_tx_data_osd(uint8_t index) //prepare osd+data to VTX
     
     }
     */
-    __pdata uint8_t mask[7] = {0};
+    uint8_t mask[7] = {0};
     uint8_t i,t1;
     uint8_t ptr;
     uint8_t hmax;
     uint8_t len_mask;
-    __pdata uint8_t page[7] = {0};
+    uint8_t page[7] = {0};
     uint8_t page_byte = 0;
     uint8_t num = 0;
     
@@ -1026,7 +1026,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
                         cms_cnt = 0;
                         break;
                     }
-                    /*if(!SA_lock)*/ {
+                    if(!SA_lock) {
                         cms_state = CMS_ENTER_VTX_MENU;
                         //Printf("\r\ncms_state(%bx)",cms_state);
                         vtx_menu_init();

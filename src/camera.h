@@ -98,8 +98,8 @@ typedef enum{
 }camStatusType_e;
 
 void CameraInit();
-uint8_t camStatusUpdate(uint8_t op);
-void camMenuInit();
+//uint8_t camStatusUpdate(uint8_t op);
+//void camMenuInit();
 
 extern uint8_t cam_4_3;
 extern uint8_t CAM_MODE;

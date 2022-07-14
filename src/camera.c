@@ -607,7 +607,7 @@ void GetCamCfg(uint8_t USE_EEP_PROFILE)
     Printf("\r\n    wbMode:     %bx", camCfg.wbMode);
     #endif
 }
-
+/*
 void GetCamCfg_Menu(uint8_t INIT_PROFILE)
 {
     uint8_t i;
@@ -699,7 +699,7 @@ void SaveCamCfg_Menu(void)
             SaveCameraParameter();
         }
     }
-}
+}*/
 
 void SetCamCfg(cameraConfig_t *cfg, uint8_t INIT)
 {
@@ -807,7 +807,7 @@ void Cam_Read_Stable(uint8_t *d0, uint8_t *d1, uint8_t *d2, uint8_t *d3, uint8_t
 #endif
 }
 #endif
-
+/*
 void Cam_Button_ENTER() { WriteReg(0, 0x14, 0x32);}
 void Cam_Button_RIGHT() { WriteReg(0, 0x14, 0x58);}
 void Cam_Button_DOWN()  { WriteReg(0, 0x14, 0x64);}
@@ -1716,4 +1716,4 @@ void camMenuStringUpdate(uint8_t status)
         uint8ToString(camCfg_Menu.wbBlue[camCfg_Menu.wbMode-1], Str);
         strcpy(osd_buf[CAM_STATUS_WBBLUE]+offset+24, Str);
     }
-}
+}*/

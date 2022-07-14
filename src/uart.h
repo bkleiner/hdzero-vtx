@@ -41,20 +41,20 @@ uint8_t RS_rx1_len(void);
 
 uint8_t RS_rx1(void);
 
-extern __bit RS_Xbusy;
-extern C51_XDAT uint8_t RS_buf[BUF_MAX];
+extern volatile __bit RS_Xbusy;
+extern volatile C51_XDAT uint8_t RS_buf[BUF_MAX];
 #ifdef EXTEND_BUF
-extern C51_XDAT uint16_t RS_in, RS_out;
+extern volatile C51_XDAT uint16_t RS_in, RS_out;
 #else
-extern C51_XDAT uint8_t RS_in, RS_out;
+extern volatile C51_XDAT uint8_t RS_in, RS_out;
 #endif
 
-extern __bit RS_Xbusy1;
-extern C51_XDAT uint8_t RS_buf1[BUF1_MAX];
+extern volatile __bit RS_Xbusy1;
+extern volatile C51_XDAT uint8_t RS_buf1[BUF1_MAX];
 #ifdef EXTEND_BUF1
-extern C51_XDAT uint16_t RS_in1, RS_out1;
+extern volatile C51_XDAT uint16_t RS_in1, RS_out1;
 #else
-extern C51_XDAT uint8_t RS_in1, RS_out1;
+extern volatile C51_XDAT uint8_t RS_in1, RS_out1;
 #endif
 
 #ifdef USE_SMARTAUDIO

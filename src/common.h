@@ -4,7 +4,8 @@
 #include <string.h>
 #include "sfr_def.h"
 #include "sfr_ext.h"
-
+#include "8051.h"
+#include "C8051F330.h"
 #define VERSION 0x41
 #define BETA 0x03
 //#define VTX_L
@@ -57,8 +58,10 @@
 #define TIMER0_1S       9588
 #define TIMER0_1SD2     (TIMER0_1S>>1)
 #define TIMER0_1SD16    (TIMER0_1S>>4)
-#define I2C_BIT_DLY     40
-#define MS_DLY          237
+#define I2C_BIT_DLY      40
+#define I2C_BIT_DLY_SDCC 28
+#define MS_DLY          (237)
+#define MS_DLY_SDCC     (2789)
 #define PRESS_L         3
 #define PRESS_LL        8
 #define PWR_LMT_SEC     10

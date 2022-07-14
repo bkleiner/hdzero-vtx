@@ -73,6 +73,24 @@ void UART0_isr() __interrupt 4
 	}
 }
 
+#define RI1 (SCON1 & 0x01)
+#define TI1 (SCON1 & 0x02)
+
+void UART1_isr() __interrupt 6
+{
+    
+	if( RI1 ) {			//RX int
+		SCON1 &= 0xfe;
+		RS_buf1[RS_in1++] = SBUF1;
+		if( RS_in1>=BUF_MAX ) RS_in1 = 0;
+	}
+
+	if( TI1 ) {			//TX int
+		SCON1 &= 0xfd;
+		RS_Xbusy1=0;
+	}
+}
+/*
 void UART1_isr() __interrupt 6
 {
 
@@ -86,7 +104,7 @@ void UART1_isr() __interrupt 6
 		TI1 = 0;
 		RS_Xbusy1=0;
 	}
-}
+}*/
 
 void main(void)
 {
