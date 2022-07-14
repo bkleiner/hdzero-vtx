@@ -2,9 +2,12 @@
 #define _MONITOR_H_
 
 #include "toolchain.h"
+#include "common.h"
 
+#ifdef _DEBUG_MODE
+
+#define Prompt()        Printf("\r\nDM568X>")
 #define MAX_CMD_LEN     30
-#define Prompt()        Printf("\r\nDM568X>")		
 
 //void MonHelp(void);
 uint8_t MonGetCommand(void);
@@ -14,4 +17,6 @@ void MonRead(uint8_t mode);
 void chg_vtx(void);
 extern XDATA_SEG uint8_t   *argv[7];	
 extern BIT_TYPE verbose;
+
+#endif
 #endif //_MONITOR_H_

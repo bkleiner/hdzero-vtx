@@ -2,6 +2,7 @@
 #define __UART_H__
 
 #include "toolchain.h"
+#include "common.h"
 
 //#define DEBUG_SA
 
@@ -13,7 +14,7 @@
 #ifdef EXTEND_BUF1
 #define  BUF1_MAX       2047    //30
 #else
-#define  BUF1_MAX	    255     //30
+#define  BUF1_MAX       255     //30
 #endif
 #include "common.h"
 

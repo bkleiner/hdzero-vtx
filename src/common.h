@@ -20,7 +20,7 @@
 #define assert(c)
 #define dbg_pt(a)   DBG_PIN0 = a
 
-#define EXTEND_BUF
+//#define EXTEND_BUF
 //#define EXTEND_BUF1
 
 // mode
