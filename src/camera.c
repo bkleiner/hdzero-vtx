@@ -19,7 +19,7 @@ PDATA_SEG cameraConfig_t camCfg_EEP[RUNCAM_PROFILE_M_TYPE];
 // {brightness, sharpness, saturation, contrast, hvFlip, nightMode, wbMode,
 //  wbRed[0], wbRed[1], wbRed[2], wbRed[3],
 //  wbBlue[0], wbBlue[1], wbBlue[2], wbBlue[3],}
-const PDATA_SEG uint8_t camParameterInit[RUNCAM_PROFILE_M_TYPE][15] = 
+PDATA_SEG uint8_t camParameterInit[RUNCAM_PROFILE_M_TYPE][15] = 
 {
     //Micro V1
     {0x80, 0x01, 0x03, 0x01, 0x00, 0x01, 0x00,
