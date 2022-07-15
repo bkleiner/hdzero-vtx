@@ -2,7 +2,6 @@
 #define _IRS_H_
 
 #include "common.h"
-#include "toolchain.h"
 
 extern uint8_t btn1_tflg;
 extern uint8_t pwr_sflg;

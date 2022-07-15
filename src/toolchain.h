@@ -10,6 +10,7 @@
 #define IDATA_SEG __idata
 #define XDATA_SEG __xdata
 #define CODE_SEG __code
+#define PDATA_SEG __pdata
 
 #define BIT_TYPE __bit
 
@@ -23,6 +24,7 @@
 #define IDATA_SEG idata
 #define XDATA_SEG xdata
 #define CODE_SEG code
+#define PDATA_SEG pdata
 
 #define BIT_TYPE bit
 

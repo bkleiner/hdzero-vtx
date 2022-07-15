@@ -1,7 +1,6 @@
 #ifndef _MONITOR_H_
 #define _MONITOR_H_
 
-#include "toolchain.h"
 #include "common.h"
 
 #ifdef _DEBUG_MODE

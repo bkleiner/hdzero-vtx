@@ -7,10 +7,12 @@
 #include "toolchain.h"
 #include "sfr_def.h"
 #include "sfr_ext.h"
+#include "toolchain.h"
 
 #define VERSION 0x41
 #define BETA 0x03
 
+// target
 //#define VTX_L
 //#define VTX_WL
 //#define VTX_S
@@ -20,7 +22,7 @@
 #define assert(c)
 #define dbg_pt(a)   DBG_PIN0 = a
 
-//#define EXTEND_BUF
+#define EXTEND_BUF
 //#define EXTEND_BUF1
 
 // mode

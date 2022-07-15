@@ -1,4 +1,3 @@
-#include "toolchain.h"
 #include "common.h"
 #include "uart.h"
 #include "print.h"
@@ -6,22 +5,21 @@
 
 XDATA_SEG uint8_t RS_buf[BUF_MAX];
 #ifdef EXTEND_BUF
-XDATA_SEG uint16_t RS_in=0, RS_out=0;
-         BIT_TYPE     RS_Xbusy=0;
+XDATA_SEG uint16_t RS_in = 0, RS_out = 0;
+BIT_TYPE RS_Xbusy = 0;
 #else
-XDATA_SEG uint8_t RS_in=0, RS_out=0;
-         BIT_TYPE     RS_Xbusy=0;
+XDATA_SEG uint8_t RS_in = 0, RS_out = 0;
+BIT_TYPE RS_Xbusy = 0;
 #endif
 
 XDATA_SEG uint8_t RS_buf1[BUF1_MAX];
 #ifdef EXTEND_BUF1
-XDATA_SEG uint16_t RS_in1=0, RS_out1=0;
-         BIT_TYPE     RS_Xbusy1=0;
+XDATA_SEG uint16_t RS_in1 = 0, RS_out1 = 0;
+BIT_TYPE RS_Xbusy1 = 0;
 #else
-XDATA_SEG uint8_t RS_in1=0, RS_out1=0;
-         BIT_TYPE     RS_Xbusy1=0;
+XDATA_SEG uint8_t RS_in1 = 0, RS_out1 = 0;
+BIT_TYPE RS_Xbusy1 = 0;
 #endif
-				 
 
 uint8_t RS_ready(void)
 {
