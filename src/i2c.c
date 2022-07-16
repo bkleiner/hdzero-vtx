@@ -1,7 +1,31 @@
-#include "common.h"
 #include "i2c.h"
+
+#include "common.h"
 #include "print.h"
 #include "global.h"
+
+#define SCL_SET(n) SCL = n
+#define SDA_SET(n) SDA = n
+
+#define SCL_GET() SCL
+#define SDA_GET() SDA
+
+#ifdef SDCC
+static void delay_20us() {
+  __asm__(
+      "mov r7,#183\n"
+      "00000$:\n"
+      "djnz r7,00000$\n");
+}
+#define DELAY_Q delay_20us()
+#else
+#define DELAY_Q                 \
+  {                             \
+    int i = (I2C_BIT_DLY >> 2); \
+    while (i--)                 \
+      ;                         \
+  }
+#endif
 
 void I2C_start()
 {
