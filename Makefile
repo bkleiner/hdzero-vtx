@@ -35,8 +35,12 @@ OBJS=$(subst .c,.rel,$(OBJ_PATHS))
 
 all: $(TARGET).bin
 
-$(TARGET).ihx: $(OBJS)
-	$(CC) $(LDFLAGS) -o $(TARGET).ihx $(OBJS)
+$(TARGET).ihx: $(SRCS)
+	rm -f build/${TARGET}.c
+	for f in $(SRCS); do \
+		(cat "$${f}"; echo) >> build/$(TARGET).c; \
+	done
+	$(CC) $(LDFLAGS) -I src/ -o $(TARGET).ihx build/$(TARGET).c
 
 %.hex: %.ihx
 	$(PACKIHX) $< > $@
