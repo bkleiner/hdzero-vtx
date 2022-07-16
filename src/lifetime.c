@@ -4,6 +4,14 @@
 uint32_t sysLifeTime = 0;
 uint32_t sysLifeTime_last = 0;
 uint8_t LifeTimeOP = 0;
+
+void init_EEP_LifeTime(void)
+{
+    sysLifeTime = 0;
+    sysLifeTime_last = 0;
+    LifeTimeOP = 0;
+}
+
 void Get_EEP_LifeTime(void)
 {
     uint8_t u8;
@@ -16,7 +24,7 @@ void Get_EEP_LifeTime(void)
     sysLifeTime += (uint32_t)u8 << 16;
     u8 = I2C_Read(ADDR_EEPROM, EEP_ADDR_LIFETIME_3, 0, 0);
     sysLifeTime += (uint32_t)u8 << 24;
-
+    
     if(sysLifeTime == 0xffffffff)
     {
         WAIT(10); I2C_Write(ADDR_EEPROM, EEP_ADDR_LIFETIME_0, 0x00, 0, 0);

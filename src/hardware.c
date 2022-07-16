@@ -70,26 +70,10 @@ uint8_t p;
 
 uint8_t i = 0;
 
-uint8_t BPLED[] = {
-    0xC0, // 0
-    0xF9, // 1
-    0xA4, // 2
-    0xB0, // 3
-    0x99, // 4
-    0x92, // 5
-    0x82, // 6
-    0xF8, // 7
-    0x80, // 8
-    0x90, // 9
-    0x88, // A
-    0x83, // b
-    0xC6, // C
-    0x8E, // F
-    0x0E  // F.
-    };
 
 uint8_t dispF_cnt = 0xff;
     
+
 void Set_720P50(uint8_t page)
 {
     WriteReg(page, 0x21, 0x25);
@@ -200,16 +184,15 @@ void CFG_Back()
 void GetVtxParameter()
 {
     unsigned char __code *ptr = 0xFFE8;
-    uint8_t i, j;
-    uint8_t tab[FREQ_MAX+1][POWER_MAX+1];
     uint8_t flash_vld = 1;
     uint8_t ee_vld = 1;
+    int i, j;
 
+    uint8_t tab[FREQ_MAX+1][POWER_MAX+1];
     WAIT(10);
     EE_VALID = !I2C_Write(ADDR_EEPROM, 0x40, 0xFF, 0, 0);
-    
     #ifdef _DEBUG_MODE
-    Printf("\r\nEE_VALID:%bx",EE_VALID);
+    Printf("\r\nEE_VALID:%x",EE_VALID);
     #endif
     
     if(EE_VALID){ // eeprom valid
@@ -221,6 +204,7 @@ void GetVtxParameter()
             }
         }
         #endif
+
         // RF Tab
         for(i=0;i<=FREQ_MAX;i++) {
             for(j=0;j<=POWER_MAX;j++){
@@ -230,7 +214,7 @@ void GetVtxParameter()
                     ee_vld = 0;
             }
         }
-        
+
         if(ee_vld){
             #ifdef _DEBUG_MODE
             Printf("\r\nUSE EEPROM for rf_pwr_tab.");
@@ -274,7 +258,7 @@ void GetVtxParameter()
         LP_MODE = I2C_Read(ADDR_EEPROM, EEP_ADDR_LPMODE, 0, 0);
         PIT_MODE = I2C_Read(ADDR_EEPROM, EEP_ADDR_PITMODE, 0, 0);
         OFFSET_25MW = I2C_Read(ADDR_EEPROM, EEP_ADDR_25MW, 0, 0);
-        
+
         if(RF_FREQ == 0xff || RF_POWER == 0xff || LP_MODE == 0xff || PIT_MODE == 0xff || OFFSET_25MW == 0xff){
             CFG_Back();
             WAIT(10);I2C_Write(ADDR_EEPROM, EEP_ADDR_RF_FREQ, RF_FREQ, 0, 0);
@@ -288,12 +272,11 @@ void GetVtxParameter()
         }else{
             CFG_Back();
             #ifdef _DEBUG_MODE
-            Printf("\r\nUSE EEPROM for VTX setting:RF_FREQ=%d, RF_POWER=%d, LPMODE=%d PIT_MODE=%d", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)LP_MODE, (uint16_t)PIT_MODE);
+            Printf("\r\nUSE EEPROM for VTX setting:RF_FREQ=%x, RF_POWER=%x, LPMODE=%x PIT_MODE=%x", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)LP_MODE, (uint16_t)PIT_MODE);
             #endif
         }
         
         //last_SA_lock
-        #ifdef USE_SMARTAUDIO
         WAIT(10);
         last_SA_lock = I2C_Read(ADDR_EEPROM, EEP_ADDR_SA_LOCK, 0, 0);
         WAIT(10);
@@ -304,14 +287,14 @@ void GetVtxParameter()
         #ifdef _DEBUG_MODE
         Printf("\r\nlast_SA_lock %bx",last_SA_lock);
         #endif
-        #endif
 
         #ifdef VTX_L
         //powerLock
         WAIT(10); powerLock = 0x01 & I2C_Read(ADDR_EEPROM, EEP_ADDR_POWER_LOCK, 0, 0);
         #endif
     }
-    else{
+    else
+    {
         for(i=0;i<=FREQ_MAX;i++) {
             for(j=0;j<=POWER_MAX;j++){
                 tab[i][j] = *ptr;
@@ -352,12 +335,12 @@ void GetVtxParameter()
     }
     
     #ifdef _DEBUG_MODE
-    for(i=0; i<=FREQ_MAX_EXT; i++){
-        Printf("\r\nrf_pwr_tab[%bd]=",i);
-        for(j=0;j<=POWER_MAX;j++)
-            Printf(" %bx", table_power[i][j]);
+    for(int k=0; k<=FREQ_MAX_EXT; k++){
+        Printf("\r\nrf_pwr_tab[%x]=",k);
+        for(int l=0;l<=POWER_MAX;l++)
+            Printf(" %x", table_power[k][l]);
     }
-    Printf("\r\nUSE EEPROM for VTX setting:RF_FREQ=%d, RF_POWER=%d, LPMODE=%d PIT_MODE=%d", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)LP_MODE, (uint16_t)PIT_MODE);
+    Printf("\r\nUSE EEPROM for VTX setting:RF_FREQ=%x, RF_POWER=%x, LPMODE=%x PIT_MODE=%x", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)LP_MODE, (uint16_t)PIT_MODE);
     #endif
 }
 
@@ -381,8 +364,45 @@ void Init_6300RF(uint8_t freq, uint8_t pwr)
 	WriteReg(0, 0x8F, 0x11);
 }
 
+
+
+
 void Init_HW()
 {
+    
+    dispF_cnt = 0xff;
+    RF_POWER = 0;
+    RF_FREQ = 0;
+    LP_MODE = 0;
+    PIT_MODE = 0;
+    OFFSET_25MW = 0; // 0~10 -> 0~10    11~20 -> -1~-10
+
+    RF_BW = BW_27M;
+
+    g_IS_ARMED = 0;
+    g_IS_PARALYZE = 0;
+
+    cfg_step = 0;   // 0:idle, 1:freq, 2:power, 3:LP_MODE
+
+    cfg_to_cnt = 0;
+    pwr_lmt_done = 0;
+    pwr_lmt_sec = 0;
+    temperature = 0;
+    pwr_offset = 0;
+    heat_protect = 0;
+
+    last_SA_lock = 0; 
+    cur_pwr = 0;
+
+    led_status = 0;
+
+    temp_err = 0;
+    #ifdef VTX_L
+    temp0 = 0;
+    #endif
+
+    i = 0;
+
 //--------- gpio init -----------------
     SPI_Init();
 
@@ -442,12 +462,11 @@ void Init_HW()
             pwr_init = 0;
     }
 #endif
-
-    
 //---------- DC IQ --------------------
     //WriteReg(0, 0x25, 0xf6);
     //WriteReg(0, 0x26, 0x00);
 }
+
 #ifdef VTX_L
 void TempDetect()
 {
@@ -496,7 +515,6 @@ void TempDetect()
 {
     static uint8_t init = 1;
     int16_t temp_new;
-    
     if(temp_tflg){
         temp_tflg = 0;
         
@@ -509,10 +527,10 @@ void TempDetect()
             temp_new = DM6300_GetTemp();
             temperature = temperature - (temperature>>2) + temp_new;
             
-            #ifdef _DEBUG_MODE
+            //ifdef _DEBUG_MODE
             //if(verbose)
                 //Printf("\r\ntemp detect: temp = %x, temp_new = %x", (uint16_t)(temperature>>2), (uint16_t)temp_new);
-            #endif
+            //#endif
         }
     }
 }
@@ -567,10 +585,10 @@ void PowerAutoSwitch()
     }
 }
 #else
+static uint8_t last_ofs = 0;
 void PowerAutoSwitch()
 {
     int16_t temp;
-    static uint8_t last_ofs = 0;
 	
     if(pwr_sflg)
         pwr_sflg = 0;
@@ -629,13 +647,13 @@ void PowerAutoSwitch()
     
     if(last_ofs != pwr_offset){
         #ifdef _DEBUG_MODE
-        Printf("\r\nPowerAutoSwitch:Yes %x %bx",temp, pwr_offset);
+        Printf("\r\nPowerAutoSwitch:Yes %x %bx, %bx",temp, pwr_offset, last_ofs);
         #endif
         DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
         cur_pwr = RF_POWER;
     }else{
         #ifdef _DEBUG_MODE
-        Printf("\r\nPowerAutoSwitch: No %x %bx",temp, pwr_offset);
+        Printf("\r\nPowerAutoSwitch: No %x %bx, %bx",temp, pwr_offset, last_ofs);
         #endif
     }
     
@@ -706,6 +724,7 @@ void HeatProtect()
                             pwr_offset = 0;
                             pwr_lmt_done = pwr_lmt_sec = 0;
                             cnt = 0;
+                            
                         }
                     }
                     else cnt = 0;
@@ -786,7 +805,7 @@ void PwrLMT()
                         #ifdef _DEBUG_MODE
                         Printf("\r\nPower limit done.");
                         #endif
-                        Prompt();
+                        //Prompt();
                     }
                 }
             }
@@ -860,7 +879,7 @@ void PwrLMT()
                             #ifdef _DEBUG_MODE
                             Printf("\r\nPower limit done.");
                             #endif
-                            Prompt();
+                            //Prompt();
                         }
                     }
                 }
@@ -887,6 +906,7 @@ void Flicker_LED(uint8_t n)
     led_status = ON;
 }
 
+
 void Video_Detect()
 {
     static uint16_t last_sec = 0;
@@ -897,17 +917,18 @@ void Video_Detect()
         last_sec = seconds;
         sec++;
 
-        if(heat_protect)
+        if(heat_protect){
             return;
+        }
 
+            
         if(cameraID){
         	LED_BLUE_ON;
         	led_status = ON;
             return;
         }
-        
         vdet = ReadReg(0, 0x02) >> 4;
-            
+        
         led_status = vdet;
         if(led_status == ON)
             LED_BLUE_ON;
@@ -925,6 +946,7 @@ void Video_Detect()
                     Set_720P50(IS_RX);
                     CAM_MODE = CAM_720P50;
                 }
+                Printf("\r\nVideo loss");
             }
         }
     }
@@ -1065,7 +1087,7 @@ void Button1_SP()
                 DM6300_SetPower(0, RF_FREQ, 0); // limit power to 25mW
                 cur_pwr = 0;
                 #ifdef _DEBUG_MODE
-                Printf("\n\rEnter LP_MODE");
+                printf("\n\rEnter LP_MODE");
                 #endif
             }
             else
@@ -1135,6 +1157,24 @@ void Flicker_MAX(uint8_t ch, uint8_t cnt)
 
 void BlinkPhase()
 {
+    
+    uint8_t BPLED[] = {
+        0xC0, // 0
+        0xF9, // 1
+        0xA4, // 2
+        0xB0, // 3
+        0x99, // 4
+        0x92, // 5
+        0x82, // 6
+        0xF8, // 7
+        0x80, // 8
+        0x90, // 9
+        0x88, // A
+        0x83, // b
+        0xC6, // C
+        0x8E, // F
+        0x0E  // F.
+        };
     uint8_t bp;
     
     if(cfg_step == 1 && (dispF_cnt < DISPF_TIME)){    //display 'F' band
@@ -1187,7 +1227,7 @@ void CFGTimeout()
                 #ifdef _DEBUG_MODE
                 Printf("\r\nCFG Timeout.");
                 #endif
-                Prompt();
+                //Prompt();
             }
         }
     }

@@ -59,7 +59,7 @@ uint8_t table_power[FREQ_MAX_EXT+1][POWER_MAX+1] = {
 void DM6300_SetChannel(uint8_t ch)
 {
     #ifdef _DEBUG_MODE
-    Printf("\r\nset ch:%bx",ch);
+    Printf("\r\nset ch:%x",ch);
     #endif
     
     if(ch > 9) ch = 0;
@@ -146,7 +146,7 @@ void DM6300_SetPower(uint8_t pwr, uint8_t freq, uint8_t offset)
     }
  
     #ifdef _DEBUG_MODE
-    Printf("\r\nDM6300 SetPower done.  %bx, %x", table_power[freq][pwr], offset);
+    Printf("\r\nDM6300 SetPower done.  %x, %x", table_power[freq][pwr], offset);
     #endif
 }
 
@@ -172,6 +172,7 @@ void DM6300_RFTest()
     for(i = 0; i<100; i++)
         SPI_Write(0x6, 0xFF0, 0x00000000, 0x00000018);
 }
+
 
 void DM6300_InitAUXADC()
 {
@@ -626,11 +627,114 @@ void DM6300_init7(uint8_t sel)
     //                   5658,  5695,  5732,  5769,  5806,  5843,  5880,  5917
     //uint32_t freq[FREQ_MAX+1] = {113160,113900,114640,115380,116120,116860,117600,118340};
     //                   5658,  5695,  5732,  5769,  5806,  5843,  5880,  5917,  5760,  5800
-    const uint32_t _freq[FREQ_MAX_EXT+1] = {113160,113900,114640,115380,116120,116860,117600,118340,115200,116000};
+    uint32_t _freq[FREQ_MAX_EXT+1] = {113160,113900,114640,115380,116120,116860,117600,118340,115200,116000};
 #else
     //                            5660,  5695,  5735,  5770,  5805,  5839,  5878,  5914
-    const uint32_t _freq[FREQ_MAX+1] = {113200,113900,114700,115400,116100,116780,117560,118280};
+    uint32_t _freq[FREQ_MAX+1] = {113200,113900,114700,115400,116100,116780,117560,118280};
 #endif
+void DM6300_variable_init()
+{
+
+    auxadc_offset = 0;
+    init6300_fcnt = 0;
+    for(int init6300_fnum_counter = 0; init6300_fnum_counter < FREQ_MAX_EXT+1; init6300_fnum_counter++) {
+        init6300_fnum[init6300_fnum_counter] = 0;
+    }
+
+    dcoc_ih = 0x075F0000;
+    dcoc_qh = 0x075F0000;
+    
+#ifdef VTX_L
+uint8_t table_power_source[FREQ_MAX_EXT+1][POWER_MAX+1] = {
+    {0x70, 0x68, 0x5c, 0x60},         
+    {0x70, 0x68, 0x5c, 0x60},         
+    {0x70, 0x68, 0x60, 0x60},
+    {0x72, 0x6d, 0x60, 0x60},         
+    {0x74, 0x70, 0x62, 0x5c},         
+    {0x78, 0x74, 0x64, 0x5b},         
+    {0x7a, 0x77, 0x64, 0x5b},
+    {0x7a, 0x77, 0x64, 0x5b},
+    {0x72, 0x6d, 0x60, 0x60},  //ch9-5760        
+    {0x74, 0x70, 0x62, 0x5c}}; //ch10-5800
+    memcpy(table_power, table_power_source, (FREQ_MAX_EXT + 1) * (POWER_MAX + 1))
+    for(int k = 0; k < FREQ_MAX_EXT + 1; k++) {
+        for(int l = 0; l < POWER_MAX + 1; l++) {
+            table_power[k][l] = table_power_source[k][l];
+        }
+    }
+#else
+{
+uint8_t table_power_source[FREQ_MAX_EXT+1][POWER_MAX+1] = {
+    {0x79, 0x83},         
+    {0x77, 0x81},         
+    {0x75, 0x80},
+    {0x73, 0x7E},         
+    {0x72, 0x7C},         
+    {0x70, 0x7B},         
+    {0x72, 0x7E},
+    {0x71, 0x7C},
+    {0x73, 0x7E},  //ch9-5760        
+    {0x72, 0x7C}}; //ch10-5800
+    for(int k = 0; k < FREQ_MAX_EXT + 1; k++) {
+        for(int l = 0; l < POWER_MAX + 1; l++) {
+            table_power[k][l] = table_power_source[k][l];
+        }
+    }
+    }
+#endif
+
+
+#ifndef Raceband
+    //ch1-8,5660M/5695M/5735M/5770M/5805M/5839M/5878M/5914M 
+    uint32_t tab_source[3][FREQ_MAX+1] = {
+        {  0x3746,   0x379D,   0x3801,   0x3859,   0x38B0,   0x3905,   0x3967,   0x39C1},
+        {    0x93,     0x94,     0x95,     0x96,     0x97,     0x98,     0x99,     0x9A},
+        {0xCAAAAB, 0x9D5555, 0xB2AAAB, 0x855555, 0x580000, 0x1D5555, 0x255555,  0x55555}
+    };
+
+    for(int k = 0; k < 3; k++) {
+        for(int l = 0; l < FREQ_MAX + 1; l++) {
+            tab[k][l] = tab_source[k][l];
+        }
+    }
+
+#else
+{
+//Raceband1-8,5658M/5695M/5732M/5769M/5806M/5843M/5880M/5917M/5760M/5800M    
+    uint32_t tab_source[3][FREQ_MAX_EXT+1] = {
+        {  0x3867,   0x379D,   0x3924,   0x3982,   0x39E1,   0x3A3F,   0x3A9E,   0x3AFC,   0x3840,   0x38A4},
+        {    0x93,     0x94,     0x95,     0x96,     0x97,     0x98,     0x99,     0x9a,     0x96,     0x97},
+        {0xB00000, 0x9D5555, 0x8AAAAB, 0x780000, 0x655555, 0x52AAAB, 0x400000, 0x2D5555, 0x000000, 0x155555}
+    };
+    for(int k = 0; k < 3; k++) {
+        for(int l = 0; l < FREQ_MAX_EXT + 1; l++) {
+            tab[k][l] = tab_source[k][l];
+        }
+    }
+    }
+#endif   
+
+#ifdef Raceband
+{
+    //                   5658,  5695,  5732,  5769,  5806,  5843,  5880,  5917
+    //uint32_t freq[FREQ_MAX+1] = {113160,113900,114640,115380,116120,116860,117600,118340};
+    //                   5658,  5695,  5732,  5769,  5806,  5843,  5880,  5917,  5760,  5800
+    uint32_t _freq_source[FREQ_MAX_EXT+1] = {113160,113900,114640,115380,116120,116860,117600,118340,115200,116000};
+    for(int k = 0; k < FREQ_MAX_EXT + 1; k++) {
+        _freq[k] = _freq_source[k];
+    }
+    }
+#else
+    //                            5660,  5695,  5735,  5770,  5805,  5839,  5878,  5914
+    uint32_t _freq_source[FREQ_MAX+1] = {113200,113900,114700,115400,116100,116780,117560,118280};
+    memcpy(_freq, _freq_source, (FREQ_MAX+1) * 4);
+    for(int k = 0; k < FREQ_MAX + 1; k++) {
+        _freq[k] = _freq_source[k];
+    }
+
+#endif
+}
+
 
 void DM6300_Init(uint8_t ch, uint8_t bw)
 {

@@ -14,7 +14,7 @@
 //#define VTX_R
 
 // system
-#define KEILC
+//#define KEILC
 #define C51_XDAT __xdata
 #define C51_IDAT __idata
 #define C51_CODE __code
@@ -48,9 +48,9 @@
 #define Raceband
 #define USE_EFUSE
 #ifndef VTX_S
-// #define USE_SMARTAUDIO
+ //#define USE_SMARTAUDIO
 #endif
-// #define INIT_VTX_TABLE
+//#define INIT_VTX_TABLE
 
 #define IS_RX 0
 
@@ -58,8 +58,8 @@
 #define TIMER0_1S       9588
 #define TIMER0_1SD2     (TIMER0_1S>>1)
 #define TIMER0_1SD16    (TIMER0_1S>>4)
-#define I2C_BIT_DLY      40
-#define I2C_BIT_DLY_SDCC 28
+#define I2C_BIT_DLY     40
+#define I2C_BIT_DLY_SDCC 70
 #define MS_DLY          (237)
 #define MS_DLY_SDCC     (2789)
 #define PRESS_L         3
@@ -83,7 +83,7 @@
 #ifdef USE_SMARTAUDIO
 #define SUART_PORT      P0_3
 #else
-#define TC3587_RSTB     P0_3
+//#define TC3587_RSTB     P0_3
 #endif
 #define CAM_PWM         P0_4
 #define BTN_1           P0_5

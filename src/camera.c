@@ -69,12 +69,12 @@ uint8_t CamDetect()
         if(fps == CAM_720P50){
             Init_TC3587();
             Set_720P50(IS_RX);
-            //Printf("\r\nCamDetect: Set 50fps.");
+            Printf("\r\nCamDetect: Set 50fps.");
         }
         else if(fps == CAM_720P60){
             Init_TC3587();
             Set_720P60(IS_RX);
-            //Printf("\r\nCamDetect: Set 60fps.");
+            Printf("\r\nCamDetect: Set 60fps.");
         }
 		
         WAIT(100);
@@ -112,10 +112,9 @@ uint8_t CamDetect()
             cameraID = RUNCAM_MICRO_V2;
         else
             cameraID = 0;
-        
-        #ifdef _DEBUG_MODE
+        //#ifdef _DEBUG_MODE
         Printf("\r\ncameraID: %bx", cameraID);
-        #endif
+        //#endif
     }
 
     return fps;

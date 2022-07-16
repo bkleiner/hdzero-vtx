@@ -9,6 +9,7 @@
 #define SET_DI(n)   SPI_DI=n
 
 #define SPI_DLY     {int i=1; while(i--);}
+//#define SPI_DLY     {__asm__("nop");}
 
 void SPI_Init()
 {
@@ -26,6 +27,8 @@ void SPI_Write_Byte(uint8_t dat)
         
         SET_DO( (dat>>i) & 0x01 );
 
+        SPI_DLY;
+        
         SET_CK(1);
         
         //SET_DO( (dat>>i) & 0x01 );
@@ -102,6 +105,7 @@ void SPI_Write(uint8_t trans, uint16_t addr, uint32_t dat_h, uint32_t dat_l)
 #endif
 }
 
+
 void SPI_Read (uint8_t trans, uint16_t addr, uint32_t* dat_h, uint32_t* dat_l)
 {
     int i, N;
@@ -138,7 +142,6 @@ void SPI_Read (uint8_t trans, uint16_t addr, uint32_t* dat_h, uint32_t* dat_l)
     SPI_DLY;SPI_DLY;SET_CS(1); // end
     SET_CK(0);
     SET_DO(0);
-    
 #ifdef _DEBUG_DM6300
     rlh = ((*dat_l) >> 16) & 0xFFFF;
     rll = (*dat_l) & 0xFFFF;

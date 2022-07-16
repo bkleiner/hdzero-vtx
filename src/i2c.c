@@ -206,9 +206,10 @@ uint8_t RUNCAM_Write(uint8_t cam_id, uint32_t addr, uint32_t val)
 
     value = I2C_write_byte(cam_id);// slave
     if(value){
+
         I2C_stop();
-        Printf("\r\nerror");
-        return 1;
+        Printf("\r\nruncam error");
+        return value;
     }
     
     I2C_write_byte(0x12);        // write cmd

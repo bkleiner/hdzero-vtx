@@ -43,6 +43,32 @@ uint8_t freq_new_h = 0x16;
 uint8_t freq_new_l = 0x1a;
 uint16_t freq = 0x161a;
 
+static uint8_t SA_state=0;
+static uint8_t SA=0xFF; 
+void initVariables() 
+{
+    SA_state=0;
+    SA=0xFF; 
+    SA_dbm = 14;
+    ch = 0;
+    mode_o = 0x04; 
+        // Bit0: 1=set freq 0=set ch    0
+        // Bit1: pitmode active         0
+        // Bit2: PIR active             1
+        // Bit3: POR active             0
+        // Bit4: 1 = Unclocked VTX      1
+        
+    mode_p = 0x05;
+        // Bit0: PIR active             1
+        // Bit1: POR active             0
+        // Bit2: pitmode active         0
+        // Bit3: 1 = Unclocked VTX      1
+        
+    freq_new_h = 0x16;
+    freq_new_l = 0x1a;
+    freq = 0x161a;
+}
+
 uint8_t dbm_to_pwr(uint8_t dbm)
 {
     if(dbm == 0)
@@ -409,7 +435,6 @@ void SA_Update(uint8_t cmd)
 
 uint8_t SA_task()
 {
-	static uint8_t SA_state=0,SA=0xFF; 
 
 	if(SA_state == 0) {  //monitor SA pin
 		SA = (SA<<1) | SUART_PORT;
@@ -544,6 +569,9 @@ uint8_t SA_Process() {
 }
 
 void SA_Init() {
+
+    initVariables();
+
     SA_dbm = pwr_to_dbm(RF_POWER);
     SA_dbm_last = SA_dbm;
     ch = RF_FREQ;

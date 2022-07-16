@@ -20,6 +20,18 @@ volatile uint8_t RS0_ERR = 0;
 
 void CPU_init(void)
 {
+    btn1_tflg = 0;
+    pwr_sflg = 0;    //power autoswitch flag
+    pwr_tflg = 0;
+    cfg_tflg = 0;
+    temp_tflg = 0;
+    timer_4hz = 0;
+    timer_8hz = 0;
+    timer_16hz = 0;
+    timer_ms10x = 0;
+    seconds = 0;
+    RS0_ERR = 0;
+
     SCON0 = 0x50;   // [7:6] uart0 mode: 0x01 = 8bit, variable baudrate(related to timer1)
                     // [4]   uart0 rx enable
 

@@ -45,6 +45,9 @@ env.AddPostAction(
             "$OBJCOPY", "-I", "ihex", "-O", "binary",
             "$BUILD_DIR/${PROGNAME}.hex", "$BUILD_DIR/${PROGNAME}.bin"
         ]), "Building $BUILD_DIR/${PROGNAME}.bin"),
-        encrypt
+        env.VerboseAction(" ".join([
+            "hex2bin.exe",
+            "$BUILD_DIR/${PROGNAME}.hex"
+        ]), "Binning $BUILD_DIR/${PROGNAME}.bin")
     ]
 )

@@ -15,15 +15,63 @@
 #include "camera.h"
 #include "lifetime.h"
 
-uint8_t UNUSED = 0;
-
 void timer_task();
 #ifdef USE_SMARTAUDIO
 void SA_Delay_init();
 #endif
 
-__bit int0_req = 0;
-__bit int1_req = 0;
+
+void flash_number(uint16_t number)
+{
+    uint8_t number_1s = (number / 1) % 10;
+    uint8_t number_10s = (number / 10) % 10;
+    uint8_t number_100s = (number / 100) % 10;
+    uint8_t number_1000s = (number / 1000) % 10;
+    while(1)
+    {
+        LED_BLUE_ON;
+        WAIT(1000);
+        LED_BLUE_OFF;
+        WAIT(1000);
+        for(int i = 0; i <= number_1000s; i++)
+        {
+            LED_BLUE_ON;
+            WAIT(200);
+            LED_BLUE_OFF;
+            WAIT(200);
+        }
+        LED_BLUE_OFF;
+        WAIT(500);
+        for(int i = 0; i <= number_100s; i++)
+        {
+            LED_BLUE_ON;
+            WAIT(200);
+            LED_BLUE_OFF;
+            WAIT(200);
+        }
+        LED_BLUE_OFF;
+        WAIT(500);
+        for(int i = 0; i <= number_10s; i++)
+        {
+            LED_BLUE_ON;
+            WAIT(200);
+            LED_BLUE_OFF;
+            WAIT(200);
+        }
+        LED_BLUE_OFF;
+        WAIT(500);
+        for(int i = 0; i <= number_1s; i++)
+        {
+            LED_BLUE_ON;
+            WAIT(200);
+            LED_BLUE_OFF;
+            WAIT(200);
+        }
+        LED_BLUE_OFF;
+        WAIT(500);
+    }
+}
+
 
 void Timer0_isr(void) __interrupt 1
 {
@@ -50,12 +98,10 @@ void Timer1_isr(void) __interrupt 3
 
 void Ext0_isr(void) __interrupt 0
 {
-	int0_req = 1;
 }
 
 void Ext1_isr(void) __interrupt 2
 {
-	int1_req = 1;
 }
 
 void UART0_isr() __interrupt 4
@@ -105,16 +151,27 @@ void UART1_isr() __interrupt 6
 		RS_Xbusy1=0;
 	}
 }*/
+#define DELAY_Q     {int i=(I2C_BIT_DLY_SDCC>>2); while(i--);  }
 
 void main(void)
 {
+    RS_in = 0;
+    RS_out = 0;
+    RS_Xbusy = 0;
+    RS_in1 = 0;
+    RS_out1 = 0;
+    RS_Xbusy1 = 0;
+
+    SA_lock = 0;
     // init
     CPU_init();
     WriteReg(0, 0xB0, 0x3E);
     WriteReg(0, 0xB2, 0x03);
     WriteReg(0, 0x80, 0xC8);
+    
+    DM6300_variable_init();
     //WAIT(100);
-
+    init_EEP_LifeTime();
     #ifdef _DEBUG_MODE
     Printf("\r\n========================================================");
     Printf("\r\n     >>>             Divimath DM568X            <<<     ");
@@ -122,10 +179,57 @@ void main(void)
     Printf("\r\n");
     #endif
 
+    uint16_t cur_timer = timer_ms10x;
+    for(int delaycounter = 0; delaycounter < 100; delaycounter++)
+    {
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+        DELAY_Q;
+    }
+    uint16_t new_timer = timer_ms10x;
+    uint16_t delaydiff = new_timer - cur_timer;
+    Printf("Delay caused this difference: %x", delaydiff);
+
     
     Init_HW(); // init
     fc_init(); // init displayport
-    
     #ifdef USE_SMARTAUDIO
     SA_Init();
     #endif
@@ -134,11 +238,11 @@ void main(void)
     Prompt();
     #endif
 
+    heat_protect = 0;
     // main loop
     while(1) {
 
         timer_task();
-
         #ifdef USE_SMARTAUDIO
         while(SA_task());
         #endif
@@ -148,16 +252,18 @@ void main(void)
         #elif defined _DEBUG_MODE
         Monitor();
         #endif
-
+        if(heat_protect) {
+            flash_number(2);
+        }
         Video_Detect();
         if(!SA_lock) OnButton1();
-
         if((last_SA_lock && (seconds > WAIT_SA_CONFIG)) || (last_SA_lock == 0)){
             TempDetect(); // temperature dectect
             PwrLMT(); // RF power ctrl
             msp_task(); // msp displayport process
             Update_EEP_LifeTime();
         }
+
         #ifdef USE_SMARTAUDIO
         SA_Delay_init();
         #endif
@@ -167,7 +273,8 @@ void main(void)
 
 void timer_task()
 {
-    static uint16_t cur_ms10x_1sd16 = 0, last_ms10x_1sd16 = 0;
+    static uint16_t cur_ms10x_1sd16 = 0;
+    static uint16_t last_ms10x_1sd16 = 0;
     static uint8_t  timer_cnt = 0;
     cur_ms10x_1sd16 = timer_ms10x;
     if(((cur_ms10x_1sd16 - last_ms10x_1sd16) >= TIMER0_1SD16) || (cur_ms10x_1sd16 < last_ms10x_1sd16)) {

@@ -11,7 +11,7 @@
 #include "spi.h"
 #include "lifetime.h"
 
-uint8_t crc8tab[256] = {
+const uint8_t crc8tab[256] = {
     0x00, 0xD5, 0x7F, 0xAA, 0xFE, 0x2B, 0x81, 0x54, 0x29, 0xFC, 0x56, 0x83, 0xD7, 0x02, 0xA8, 0x7D,
     0x52, 0x87, 0x2D, 0xF8, 0xAC, 0x79, 0xD3, 0x06, 0x7B, 0xAE, 0x04, 0xD1, 0x85, 0x50, 0xFA, 0x2F,
     0xA4, 0x71, 0xDB, 0x0E, 0x5A, 0x8F, 0x25, 0xF0, 0x8D, 0x58, 0xF2, 0x27, 0x73, 0xA6, 0x0C, 0xD9,
@@ -85,12 +85,82 @@ uint16_t msp_rcv_tick_8hz = 0;
 
 uint8_t msp_rbuf[64];
 
+static uint8_t one_frame_state = MSP_HEADER_START;
+static uint8_t one_frame_cur_cmd = CUR_OTHERS;
+static uint8_t one_frame_ptr = 0; //write ptr of msp_rx_buf
+static uint8_t one_frame_crc = 0;
+static uint16_t one_frame_cmd_u16 = 0;
+static uint16_t one_frame_len_u16 = 0;
+
+static uint8_t tx_row = 0;
+static uint8_t t1 = 0;
+static uint8_t vmax = SD_VMAX;
+
+static uint8_t last_pwr = 255;
+static uint8_t last_lp = 255;
+static uint8_t last_pit = 255;
+
+static uint8_t vtx_state = 0;
+static uint8_t last_mid = 1;
+
+void init_variables() {
+    vtx_state = 0;
+    last_mid = 1;
+    last_pwr = 255;
+    last_lp = 255;
+    last_pit = 255;
+
+    tx_row = 0;
+    t1 = 0;
+    vmax = SD_VMAX;
+
+    one_frame_state = MSP_HEADER_START;
+    one_frame_cur_cmd = CUR_OTHERS;
+    one_frame_ptr = 0; //write ptr of msp_rx_buf
+    one_frame_crc = 0;
+    one_frame_cmd_u16 = 0;
+    one_frame_len_u16 = 0;
+
+    fc_variant[0] = 'B';
+    fc_variant[1] = 'T';
+    fc_variant[2] = 'F';
+    fc_variant[3] = 'L';
+    fc_lock = 0;
+    vtx_pit_save = PIT_OFF;
+    vtx_offset = 0;
+    first_arm = 0;
+
+    fc_band_rx      = 0;
+    fc_channel_rx   = 0;
+    fc_pwr_rx       = 0;
+    fc_pit_rx       = 0;
+    fc_lp_rx        = 0;
+    fc_band_tx      = 0;
+    fc_channel_tx   = 0;
+    fc_pwr_tx       = 0;
+    fc_pit_tx       = 0;
+
+    pit_mode_cfg_done = 0;
+    lp_mode_cfg_done = 0;
+    g_IS_ARMED_last = 0;
+
+    lq_cnt = 0;
+
+    cms_state = CMS_OSD;
+
+    msp_tx_cnt = 0xff;
+
+    msp_rcv = 0;
+    tick_8hz = 0;
+    msp_rcv_tick_8hz = 0;
+    disarmed = 1;
+    fontType = 0x00;
+    resolution = SD_3016;
+    resolution_last = HD_5018;
+}
 
 void msp_task(){
     uint8_t len;
-    static uint8_t tx_row = 0;
-    static uint8_t t1 = 0;
-    static uint8_t vmax = SD_VMAX;
     
     #ifdef DBG_DISPLAYPORT
     if(RS0_ERR){
@@ -147,14 +217,8 @@ void msp_task(){
 }
 
 uint8_t msp_read_one_frame() {
-    static uint8_t state = MSP_HEADER_START;
-    static uint8_t cur_cmd = CUR_OTHERS;
-    static uint8_t length, osd_len;
-    static uint8_t ptr = 0; //write ptr of msp_rx_buf
-    static uint8_t crc = 0;
-    static uint16_t cmd_u16 = 0;
-    static uint16_t len_u16 = 0;
     
+    static uint8_t length, osd_len;
     uint8_t i,ret,full_frame,rx;
 
     ret = 0;
@@ -163,84 +227,83 @@ uint8_t msp_read_one_frame() {
         if((!CMS_ready()) || full_frame) return ret;
         rx = CMS_rx();
 
-        switch(state) {
+        switch(one_frame_state) {
             case MSP_HEADER_START:
                 if(rx == MSP_HEADER_START_BYTE) {
-                    ptr = 0;
-                    state = MSP_HEADER_M;
+                    one_frame_ptr = 0;
+                    one_frame_state = MSP_HEADER_M;
                 }
                 #ifdef DBG_DISPLAYPORT
-                else 
                     _outchar('&');
                 #endif
                 break;
 
             case MSP_HEADER_M:
                 if(rx == MSP_HEADER_M_BYTE){
-                    state = MSP_PACKAGE_REPLAY1;
+                    one_frame_state = MSP_PACKAGE_REPLAY1;
                 }else if(rx == MSP_HEADER_M2_BYTE){
-                    state = MSP_PACKAGE_REPLAY2;
+                    one_frame_state = MSP_PACKAGE_REPLAY2;
                 }else{
-                    state = MSP_HEADER_START;
+                    one_frame_state = MSP_HEADER_START;
                 }
                 break;
 
             case MSP_PACKAGE_REPLAY1: //0x3E
                 if(rx == MSP_PACKAGE_REPLAY_BYTE){
-                    state = MSP_LENGTH;
+                    one_frame_state = MSP_LENGTH;
                 }else {
-                    state = MSP_HEADER_START;
+                    one_frame_state = MSP_HEADER_START;
                 }
                 break;
 
             case MSP_LENGTH:
-                crc = rx;
-                state = MSP_CMD;
+                one_frame_crc = rx;
+                one_frame_state = MSP_CMD;
                 length = rx;
                 osd_len = rx - 4;
                 break;
 
             case MSP_CMD:
-                crc ^= rx;
+                one_frame_crc ^= rx;
                 if(length == 0){
-                    cur_cmd = CUR_OTHERS;
-                    state = MSP_CRC1;
+                    one_frame_cur_cmd = CUR_OTHERS;
+                    one_frame_state = MSP_CRC1;
                 }else{
                     if(rx == MSP_CMD_DISPLAYPORT_BYTE) {
-                        cur_cmd = CUR_DISPLAYPORT;
+                        one_frame_cur_cmd = CUR_DISPLAYPORT;
                     }else if(rx == MSP_CMD_RC_BYTE) {
-                        cur_cmd = CUR_RC;
+                        one_frame_cur_cmd = CUR_RC;
                     }else if(rx == MSP_CMD_STATUS_BYTE) {
-                        cur_cmd = CUR_STATUS;
+                        one_frame_cur_cmd = CUR_STATUS;
                     }else if(rx == MSP_CMD_FC_VARIANT) {
-                        cur_cmd = CUR_FC_VARIANT;
+                        one_frame_cur_cmd = CUR_FC_VARIANT;
                     }else if(rx == MSP_CMD_VTX_CONFIG){
-                        cur_cmd = CUR_VTX_CONFIG;
+                        one_frame_cur_cmd = CUR_VTX_CONFIG;
                     }
-                    state = MSP_RX1;
+                    one_frame_state = MSP_RX1;
                 }
                 //Printf("\r\n%bx ",rx);
                 break;
             
             case MSP_RX1:
-                crc ^= rx;
-                msp_rx_buf[ptr++] = rx; ptr &= 63;
+                one_frame_crc ^= rx;
+                msp_rx_buf[one_frame_ptr++] = rx; one_frame_ptr &= 63;
                 length--;
                 if(length == 0)
-                    state = MSP_CRC1;
+                    one_frame_state = MSP_CRC1;
                 break;
 
             case MSP_CRC1:
-                if(rx == crc){
-                    if(cur_cmd == CUR_STATUS)
+                if(rx == one_frame_crc){
+                    if(one_frame_cur_cmd == CUR_STATUS)
                         parse_status();
-                    else if(cur_cmd == CUR_RC)
+                    else if(one_frame_cur_cmd == CUR_RC)
                         parse_rc();
-                    else if(cur_cmd == CUR_FC_VARIANT)
+                    else if(one_frame_cur_cmd == CUR_FC_VARIANT)
                         parse_variant();
-                    else if(cur_cmd == CUR_VTX_CONFIG)
+                    else if(one_frame_cur_cmd == CUR_VTX_CONFIG)
                         parse_vtx_config();
-                    else if(cur_cmd == CUR_DISPLAYPORT)
+                    else if(one_frame_cur_cmd == CUR_DISPLAYPORT)
                         ret = parse_displayport(osd_len);
                     full_frame = 1;
                     if(fc_lock & FC_VTX_CONFIG_LOCK){
@@ -257,72 +320,72 @@ uint8_t msp_read_one_frame() {
                     }
                 }
                 #ifdef DBG_DISPLAYPORT
-                else
                     _outchar('^');
+                else
                 #endif
-                    state = MSP_HEADER_START;
+                    one_frame_state = MSP_HEADER_START;
                 break;
 
             case MSP_PACKAGE_REPLAY2: //0x3E
                 if(rx == MSP_PACKAGE_REPLAY_BYTE){
-                    state = MSP_ZERO;
+                    one_frame_state = MSP_ZERO;
                 }else{
-                    state = MSP_HEADER_START;
+                    one_frame_state = MSP_HEADER_START;
                 }
                 break;
 
             case MSP_ZERO: //0x00
-                crc = crc8tab[rx]; // 0 ^ rx = rx
+                one_frame_crc = crc8tab[rx]; // 0 ^ rx = rx
                 if(rx == 0x00){
-                    state = MSP_CMD_L;
-                    state = MSP_CMD_L;
+                    one_frame_state = MSP_CMD_L;
+                    one_frame_state = MSP_CMD_L;
                 }else{
-                    state = MSP_HEADER_START;
+                    one_frame_state = MSP_HEADER_START;
                 }
                 break;
 
             case MSP_CMD_L:
-                crc = crc8tab[crc ^ rx];
-                cmd_u16 = rx;
-                state = MSP_CMD_H;
+                one_frame_crc = crc8tab[one_frame_crc ^ rx];
+                one_frame_cmd_u16 = rx;
+                one_frame_state = MSP_CMD_H;
                 break;
 
             case MSP_CMD_H:
-                crc = crc8tab[crc ^ rx];
-                cmd_u16 += ((uint16_t)rx << 8);
-                state = MSP_LEN_L;
+                one_frame_crc = crc8tab[one_frame_crc ^ rx];
+                one_frame_cmd_u16 += ((uint16_t)rx << 8);
+                one_frame_state = MSP_LEN_L;
                 break;
 
             case MSP_LEN_L:
-                crc = crc8tab[crc ^ rx];
-                len_u16 = rx;
-                state = MSP_LEN_H;
+                one_frame_crc = crc8tab[one_frame_crc ^ rx];
+                one_frame_len_u16 = rx;
+                one_frame_state = MSP_LEN_H;
                 break;
 
             case MSP_LEN_H:
-                crc = crc8tab[crc ^ rx];
-                len_u16 += ((uint16_t)rx << 8);
-                ptr = 0;
-                state = MSP_RX2;
+                one_frame_crc = crc8tab[one_frame_crc ^ rx];
+                one_frame_len_u16 += ((uint16_t)rx << 8);
+                one_frame_ptr = 0;
+                one_frame_state = MSP_RX2;
                 break;
 
             case MSP_RX2:
-                crc = crc8tab[crc ^ rx];
-                msp_rx_buf[ptr++] = rx; ptr &= 63;
-                len_u16--;
-                if(len_u16 == 0)
-                    state = MSP_CRC2;
+                one_frame_crc = crc8tab[one_frame_crc ^ rx];
+                msp_rx_buf[one_frame_ptr++] = rx; one_frame_ptr &= 63;
+                one_frame_len_u16--;
+                if(one_frame_len_u16 == 0)
+                    one_frame_state = MSP_CRC2;
                 break;
 
             case MSP_CRC2:
-                if(crc == rx)
-                    parseMspVtx_V2(cmd_u16);
+                if(one_frame_crc == rx)
+                    parseMspVtx_V2(one_frame_cmd_u16);
                 #ifdef _DEBUG_MODE
-                Printf("\r\ncrc : %bx,%bx", crc, rx);
+                Printf("\r\ncrc : %bx,%bx", one_frame_crc, rx);
                 #endif
 
             default:
-                state = MSP_HEADER_START;
+                one_frame_state = MSP_HEADER_START;
                 break;
           }//switch(state)
         } //i
@@ -375,6 +438,7 @@ void fc_init()
     dptx_wptr = dptx_rptr = 0;
 
     osd_ready = 0;
+    init_variables();
     clear_screen();
     init_tx_buf();
     //vtx_menu_init();
@@ -734,9 +798,6 @@ void parseMspVtx_V2(uint16_t cmd_u16)
     uint8_t nxt_pwr = 0;
     uint8_t pit_update = 0;
     uint8_t needSaveEEP = 0;
-    static uint8_t last_pwr = 255;
-    static uint8_t last_lp = 255;
-    static uint8_t last_pit = 255;
 
     if(cmd_u16 != MSP_CMD_VTX_CONFIG)
         return;
@@ -966,10 +1027,8 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
  *
  *                throttle(油门) -                                          pitch(俯仰) -
 */
-    static uint8_t vtx_state = 0;
-    uint8_t mid = 0;
-    static uint8_t last_mid = 1;
     static uint8_t cms_cnt;
+    uint8_t mid = 0;
     
     uint8_t VirtualBtn = BTN_INVALID;
     

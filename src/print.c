@@ -5,7 +5,7 @@
 uint16_t global_cnt;
 uint16_t global_value;
 
-#ifdef _DEBUG_MODE
+//#ifdef _DEBUG_MODE
 void DoPrint( const char CODE_P *fmt, va_list ap )
 {
     char ch;
@@ -151,18 +151,18 @@ void DoPrint( const char CODE_P *fmt, va_list ap )
 		}
 	}
 }
-#endif
+//#endif
 
 
 void Printf( const char CODE_P *fmt, ... )
 {
-#ifdef _DEBUG_MODE
+//#ifdef _DEBUG_MODE
 	va_list ap;
 
 	va_start(ap, fmt);
 	DoPrint( fmt, ap );
 	va_end( ap );
-#endif
+//#endif
 }
 
 /*void Puts( char *ptr )

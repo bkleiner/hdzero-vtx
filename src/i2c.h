@@ -6,11 +6,10 @@
 
 #define SCL_GET()   SCL
 #define SDA_GET()   SDA
-
 #ifdef Keil
 #define DELAY_Q     {int i=(I2C_BIT_DLY>>2); while(i--);}
 #else
-#define DELAY_Q     {int i=(I2C_BIT_DLY_SDCC); while(i--);}
+#define DELAY_Q     {int i=(I2C_BIT_DLY_SDCC>>2); while(i--);  }
 #endif
 uint8_t I2C_Write(uint8_t slave_addr, uint16_t reg_addr, uint32_t val, uint8_t addr16, uint8_t bnum);
 uint32_t I2C_Read(uint8_t slave_addr, uint16_t reg_addr, uint8_t addr16, uint8_t bnum);
