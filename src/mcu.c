@@ -96,7 +96,6 @@ void main(void)
     WriteReg(0, 0xB2, 0x03);
     WriteReg(0, 0x80, 0xC8);
     //WAIT(100);
-
     #ifdef _DEBUG_MODE
     debugf("\r\n========================================================");
     debugf("\r\n     >>>             Divimath DM568X            <<<     ");

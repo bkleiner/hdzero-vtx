@@ -23,15 +23,15 @@ void SPI_Write_Byte(uint8_t dat)
     int i;
     for(i=7; i>=0; i--){
         SPI_DLY;
-        
+
         SET_DO( (dat>>i) & 0x01 );
 
-        SET_CK(1);
-        
-        //SET_DO( (dat>>i) & 0x01 );
-        
         SPI_DLY;
-        
+
+        SET_CK(1);
+
+        SPI_DLY;
+
         SET_CK(0);
     }
 }
@@ -51,8 +51,6 @@ uint8_t SPI_Read_Byte()
         ret = (ret<<1) | SPI_DI;
         
         SET_CK(0);
-        
-        //ret = (ret<<1) | SPI_DI;
     }
     
     return ret;

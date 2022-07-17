@@ -962,7 +962,7 @@ void DM6300_EFUSE2()
                                               ((efuse.macro.m2[i].tx1.dcoc_q << 8)  & 0xFF0000) |
                                               ((efuse.macro.m2[i].tx1.dcoc_q << 24) & 0xFF000000);
             #endif
-            
+            #ifdef _DEBUG_MODE
             debugf("\r\niqmismatch_old=%lx", efuse.macro.m2[i].tx1.iqmismatch);
             debugf("\r\ndcoc_i_old=%lx", efuse.macro.m2[i].tx1.dcoc_i);
             debugf("\r\ndcoc_q_old=%lx", efuse.macro.m2[i].tx1.dcoc_q);
@@ -970,7 +970,7 @@ void DM6300_EFUSE2()
             //change dc_i/dc_q
             debugf("\r\n version[1] = %x",(uint16_t)version[1]);
             debugf("\r\n version[3] = %x",(uint16_t)version[3]);
-
+            #endif
             //if((version[1]>'2') | ((version[1]>='2') && (version[3]>'1'))){ //version > 2.1
             if((version[1]=='2') && (version[3]=='2')){ //version = 2.2            
                 ef_data = efuse.macro.m2[i].tx1.dcoc_i;
@@ -985,18 +985,20 @@ void DM6300_EFUSE2()
             SPI_Write(0x3, 0xD08, 0x00000000,  efuse.macro.m2[i].tx1.iqmismatch);
             SPI_Write(0x3, 0x380, 0x00000000,  efuse.macro.m2[i].tx1.dcoc_i);
             SPI_Write(0x3, 0x388, 0x00000000,  efuse.macro.m2[i].tx1.dcoc_q);
-
+            #ifdef _DEBUG_MODE
             debugf("\r\niqmismatch=%lx", efuse.macro.m2[i].tx1.iqmismatch);
             debugf("\r\ndcoc_i=%lx", efuse.macro.m2[i].tx1.dcoc_i);
             debugf("\r\ndcoc_q=%lx", efuse.macro.m2[i].tx1.dcoc_q);
-            
+            #endif
             dcoc_ih = efuse.macro.m2[i].tx1.dcoc_i & 0xFFFF0000;
             dcoc_qh = efuse.macro.m2[i].tx1.dcoc_q & 0xFFFF0000;
-            
+            #ifndef KILL_EEPROM
             if(EE_VALID){
                 WAIT(10); rdat = I2C_Read(ADDR_EEPROM, EEP_ADDR_DCOC_EN, 0, 0);
                 if((rdat & 0xFF) == 0){
+                    #ifdef _DEBUG_MODE
                     debugf("\r\nDCOC read from EEPROM:");
+                    #endif
                     SPI_Write(0x6, 0xFF0, 0x00000000, 0x00000018);
                     
                     WAIT(10); rdat = I2C_Read(ADDR_EEPROM, EEP_ADDR_DCOC_IH, 0, 0);
@@ -1004,16 +1006,21 @@ void DM6300_EFUSE2()
                     WAIT(10); rdat |= I2C_Read(ADDR_EEPROM, EEP_ADDR_DCOC_IL, 0, 0);
                     rdat |= dcoc_ih;
                     SPI_Write(0x3, 0x380, 0x00000000, rdat);
+                    #ifdef _DEBUG_MODE
                     debugf("\r\ndcoc_i=%lx", rdat);
+                    #endif
                     
                     WAIT(10); rdat = I2C_Read(ADDR_EEPROM, EEP_ADDR_DCOC_QH, 0, 0);
                     rdat <<= 8;
                     WAIT(10); rdat |= I2C_Read(ADDR_EEPROM, EEP_ADDR_DCOC_QL, 0, 0);
                     rdat |= dcoc_qh;
                     SPI_Write(0x3, 0x388, 0x00000000, rdat);
+                    #ifdef _DEBUG_MODE
                     debugf("\r\ndcoc_q=%lx", rdat);
+                    #endif
                 }
             }
+            #endif
             
             /*if(EE_VALID){
                 WAIT(10); d0 = I2C_Read(ADDR_EEPROM, 0xa8, 0, 0);

@@ -70,7 +70,7 @@ uint8_t msp_rbuf[64];
 
 #ifdef USE_MSP
 
-uint8_t crc8tab[256] = {
+const uint8_t crc8tab[256] = {
     0x00, 0xD5, 0x7F, 0xAA, 0xFE, 0x2B, 0x81, 0x54, 0x29, 0xFC, 0x56, 0x83, 0xD7, 0x02, 0xA8, 0x7D,
     0x52, 0x87, 0x2D, 0xF8, 0xAC, 0x79, 0xD3, 0x06, 0x7B, 0xAE, 0x04, 0xD1, 0x85, 0x50, 0xFA, 0x2F,
     0xA4, 0x71, 0xDB, 0x0E, 0x5A, 0x8F, 0x25, 0xF0, 0x8D, 0x58, 0xF2, 0x27, 0x73, 0xA6, 0x0C, 0xD9,
@@ -223,7 +223,9 @@ uint8_t msp_read_one_frame() {
                     }
                     state = MSP_RX1;
                 }
-                //debugf("\r\n%x ",rx);
+                #ifdef DBG_DISPLAYPORT
+                debugf("\r\n%x ",rx);
+                #endif
                 break;
             
             case MSP_RX1:
@@ -699,12 +701,10 @@ void parse_rc()
     
     if(!(fc_lock & FC_RC_LOCK))
         fc_lock |= FC_RC_LOCK;
-    
     roll      = (msp_rx_buf[1] << 8) | msp_rx_buf[0];
     pitch     = (msp_rx_buf[3] << 8) | msp_rx_buf[2];
     yaw       = (msp_rx_buf[5] << 8) | msp_rx_buf[4];
     throttle  = (msp_rx_buf[7] << 8) | msp_rx_buf[6];
-
     update_cms_menu(roll,pitch,yaw,throttle);
     /*
     roll_d = roll;
@@ -791,13 +791,16 @@ void parseMspVtx_V2(uint16_t cmd_u16)
         DM6300_SetChannel(RF_FREQ);
         needSaveEEP = 1;
     }
+    #ifdef _DEBUG_MODE
     debugf("\r\nparse_vtx_config pwr:%x, pit:%x", nxt_pwr, fc_pit_rx);
-
+    #endif
     //update pit
     if(fc_pit_rx != last_pit)
     {
         PIT_MODE = fc_pit_rx & 1;
+        #ifdef _DEBUG_MODE
         debugf("\r\nPIT_MODE = %x", PIT_MODE);
+        #endif
         if(PIT_MODE)
         {
             DM6300_SetPower(POWER_MAX+1, RF_FREQ, pwr_offset);

@@ -394,7 +394,7 @@ void Runcam_SetWB(uint8_t* wbRed, uint8_t* wbBlue, uint8_t wbMode)
         RUNCAM_Write(cameraID, 0x0001b8, 0x020b0079);
     }
 }
-
+#ifndef KILL_EEPROM
 void CheckCameraParameter(void)
 {
     uint8_t i, j;
@@ -520,7 +520,7 @@ void GetCamCfg_EEP(void)
 
     CheckCameraParameter();
 }
-
+#endif
 void GetCamCfg(uint8_t USE_EEP_PROFILE)
 {
     uint8_t i;
@@ -658,10 +658,11 @@ void SaveCamCfg_Menu(void)
     
     if(cameraID == RUNCAM_MICRO_V1)
     {
+        
+        #ifndef KILL_EEPROM
         camProfile_EEP &= 0xf0;
         camProfile_EEP |= (camProfile & 0x0f);
         WAIT(10); I2C_Write(ADDR_EEPROM, EEP_ADDR_CAM_PROFILE, camProfile_EEP, 0, 0);
-
         if(camProfile == 1)
         {
             camCfg_EEP[0].brightness = camCfg.brightness;
@@ -678,9 +679,12 @@ void SaveCamCfg_Menu(void)
             }
             SaveCameraParameter();
         }
+        #endif
     }
     else if(cameraID == RUNCAM_MICRO_V2)
     {
+        
+        #ifndef KILL_EEPROM
         camProfile_EEP &= 0x0f;
         camProfile_EEP |= (camProfile << 4);
         WAIT(10); I2C_Write(ADDR_EEPROM, EEP_ADDR_CAM_PROFILE, camProfile_EEP, 0, 0);
@@ -701,8 +705,10 @@ void SaveCamCfg_Menu(void)
             }
             SaveCameraParameter();
         }
+        #endif
     }
 }
+
 
 void SetCamCfg(cameraConfig_t *cfg, uint8_t INIT)
 {
@@ -768,8 +774,9 @@ void CameraInit()
 {
     CAM_MODE = CamDetect();
     Cam_Button_INIT();
-
+#ifndef KILL_EEPROM
     GetCamCfg_EEP();
+#endif
     GetCamCfg(1);
     SetCamCfg(&camCfg, 1);
 }

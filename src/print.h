@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 
+#ifdef _DEBUG_MODE
 void debugf(const char *fmt, ...);
-
+#endif
 #endif

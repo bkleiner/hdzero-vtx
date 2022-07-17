@@ -4,10 +4,10 @@
 
 #include <stdio.h>
 
+#ifdef _DEBUG_MODE
 static XDATA_SEG char print_buf[128];
 
 void debugf(const char *fmt, ...) {
-#ifdef _DEBUG_MODE
   int len = 0;
   int i = 0;
   va_list ap;
@@ -20,5 +20,5 @@ void debugf(const char *fmt, ...) {
     _outchar(print_buf[i]);
   }
 
-#endif
 }
+#endif

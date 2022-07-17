@@ -27,6 +27,7 @@
 //#define _RF_CALIB
 //#define REV_UART
 //#define VIDEO_PAT
+//#define DBG_DISPLAYPORT
 
 //#define FIX_EEP
 
@@ -45,7 +46,7 @@
 #ifndef VTX_S
 #define USE_SMARTAUDIO
 #endif
-#define INIT_VTX_TABLE
+//#define INIT_VTX_TABLE
 
 #define IS_RX 0
 
@@ -76,7 +77,7 @@
 #ifdef USE_SMARTAUDIO
 #define SUART_PORT      P0_3
 #else
-#define TC3587_RSTB     P0_3
+//#define TC3587_RSTB     P0_3
 #endif
 #define CAM_PWM         P0_4
 #define BTN_1           P0_5
@@ -85,7 +86,7 @@
 #define SPI_CK          P1_1
 #define SPI_DI          P0_6
 #define SPI_DO          P0_7
-
+#define KILL_EEPROM
 // uart
 #ifndef REV_UART
 #define Mon_tx(ch)      RS_tx1(ch)

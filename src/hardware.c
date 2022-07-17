@@ -211,7 +211,7 @@ void GetVtxParameter()
     #ifdef _DEBUG_MODE
     debugf("\r\nEE_VALID:%x",EE_VALID);
     #endif
-    
+    #ifndef KILL_EEPROM
     if(EE_VALID){ // eeprom valid
         
         #ifdef FIX_EEP
@@ -350,7 +350,7 @@ void GetVtxParameter()
         debugf("\r\nUSE CAM for VTX setting.");
         #endif
     }
-    
+    #endif
     #ifdef _DEBUG_MODE
     for(i=0; i<=FREQ_MAX_EXT; i++){
         debugf("\r\nrf_pwr_tab[%d]=",i);
@@ -785,8 +785,8 @@ void PwrLMT()
                         
                         #ifdef _DEBUG_MODE
                         debugf("\r\nPower limit done.");
-                        #endif
                         Prompt();
+                        #endif
                     }
                 }
             }
@@ -859,8 +859,8 @@ void PwrLMT()
                             
                             #ifdef _DEBUG_MODE
                             debugf("\r\nPower limit done.");
-                            #endif
                             Prompt();
+                            #endif
                         }
                     }
                 }
@@ -947,8 +947,10 @@ void Imp_RF_Param()
 }
 
 void Button1_SP()
-{
+{                    
+    #ifdef _DEBUG_MODE
     debugf("\r\nButton1_SP.");
+    #endif
     cfg_to_cnt = 0;
     switch(cfg_step){
         case 0:
@@ -991,7 +993,7 @@ void Button1_SP()
                 dispF_cnt = 0;
             Imp_RF_Param();
             Setting_Save();
-            msp_set_vtx_config(RF_POWER, 1);
+//            msp_set_vtx_config(RF_POWER, 1);
             
             if(LP_MODE){
                 cur_pwr = 0;
@@ -1024,7 +1026,7 @@ void Button1_SP()
             Imp_RF_Param();
             Setting_Save();
             
-            msp_set_vtx_config(RF_POWER, 1);
+//            msp_set_vtx_config(RF_POWER, 1);
             if(LP_MODE){ // limit power to 25mW
                 DM6300_SetPower(0, RF_FREQ, 0);
                 cur_pwr = 0;
@@ -1073,7 +1075,7 @@ void Button1_SP()
                 DM6300_SetPower(RF_POWER, RF_FREQ, 0);
             }
 
-            msp_set_vtx_config(RF_POWER, 1);
+//            msp_set_vtx_config(RF_POWER, 1);
         
             Setting_Save();
             break;
@@ -1186,8 +1188,8 @@ void CFGTimeout()
                 Init_MAX7315(0xFF);
                 #ifdef _DEBUG_MODE
                 debugf("\r\nCFG Timeout.");
-                #endif
                 Prompt();
+                #endif
             }
         }
     }
