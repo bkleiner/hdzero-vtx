@@ -30,7 +30,7 @@ void _verbosef(const char *fmt, ...) {
     va_list ap;
 
     if (!verbose) {
-      return;
+        return;
     }
 
     va_start(ap, fmt);

@@ -5,16 +5,16 @@
 
 #ifdef USE_SMARTAUDIO
 
-#define FREQ_R1  (uint16_t)5658
-#define FREQ_R2  (uint16_t)5696
-#define FREQ_R3  (uint16_t)5732
-#define FREQ_R4  (uint16_t)5769
-#define FREQ_R5  (uint16_t)5806
-#define FREQ_R6  (uint16_t)5843
-#define FREQ_R7  (uint16_t)5880
-#define FREQ_R8  (uint16_t)5917
-#define FREQ_F2  (uint16_t)5760
-#define FREQ_F4  (uint16_t)5800
+#define FREQ_R1 (uint16_t)5658
+#define FREQ_R2 (uint16_t)5696
+#define FREQ_R3 (uint16_t)5732
+#define FREQ_R4 (uint16_t)5769
+#define FREQ_R5 (uint16_t)5806
+#define FREQ_R6 (uint16_t)5843
+#define FREQ_R7 (uint16_t)5880
+#define FREQ_R8 (uint16_t)5917
+#define FREQ_F2 (uint16_t)5760
+#define FREQ_F4 (uint16_t)5800
 
 //#define DBG_SMARTAUDIO
 
@@ -27,8 +27,7 @@
 #define SA_SET_FREQ 0x04
 #define SA_SET_MODE 0x05
 
-typedef enum
-{
+typedef enum {
     SA_HEADER0,
     SA_HEADER1,
     SA_CMD,
@@ -40,7 +39,7 @@ typedef enum
 
 uint8_t SA_task();
 uint8_t SA_Process();
-void    SA_Init();
+void SA_Init();
 
 extern uint8_t SA_dbm;
 uint8_t pwr_to_dbm(uint8_t pwr);
