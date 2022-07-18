@@ -15,7 +15,6 @@ env.Append(
     LINKFLAGS=SDCC_OPTS
 )
 
-
 def dbg_print(line=''):
     print(line, flush=True)
     return
