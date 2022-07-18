@@ -1,4 +1,5 @@
 #include "print.h"
+
 #include "common.h"
 #include "uart.h"
 
@@ -24,13 +25,12 @@ void _debugf(const char *fmt, ...) {
 }
 
 void _verbosef(const char *fmt, ...) {
-
     int len = 0;
     int i = 0;
     va_list ap;
 
     if (!verbose) {
-      return;
+        return;
     }
 
     va_start(ap, fmt);

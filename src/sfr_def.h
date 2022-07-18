@@ -175,4 +175,4 @@ SBIT_DEF(RI1, REG_SCON1 ^ 0);
 // SBIT_DEF(INT3F,    EIF^1);
 // SBIT_DEF(INT2F,    EIF^0);
 
-#endif
+#endif /* __SFR_DEF_H_ */

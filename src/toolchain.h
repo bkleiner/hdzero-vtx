@@ -1,5 +1,5 @@
-#ifndef __TOOLCHAIN__H_
-#define __TOOLCHAIN__H_
+#ifndef __TOOLCHAIN_H_
+#define __TOOLCHAIN_H_
 
 #ifdef SDCC
 
@@ -33,4 +33,4 @@
 
 #endif
 
-#endif
+#endif /* __TOOLCHAIN_H_ */
