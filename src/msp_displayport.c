@@ -143,8 +143,7 @@ void msp_parse_vtx_config() {
     fc_pit_rx = msp_rx_buf[4];
     fc_lp_rx = msp_rx_buf[8];
 
-#ifdef _DEBUG_MODE
-    debugf("\r\nparseMspVtx_V2");
+    debugf("\r\nmsp_parse_vtx_config");
     debugf("\r\n    fc_vtx_dev:    %x", (uint16_t)msp_rx_buf[0]);
     debugf("\r\n    fc_band_rx:    %x", (uint16_t)msp_rx_buf[1]);
     debugf("\r\n    fc_channel_rx: %x", (uint16_t)msp_rx_buf[2]);
@@ -155,7 +154,6 @@ void msp_parse_vtx_config() {
     debugf("\r\n    fc_bands:      %x", (uint16_t)msp_rx_buf[12]);
     debugf("\r\n    fc_channels:   %x", (uint16_t)msp_rx_buf[13]);
     debugf("\r\n    fc_powerLevels %x", (uint16_t)msp_rx_buf[14]);
-#endif
 
     if (SA_lock)
         return;
@@ -191,9 +189,7 @@ void msp_parse_vtx_config() {
 
     if (fc_pit_rx != last_pit) {
         PIT_MODE = fc_pit_rx & 1;
-#ifdef _DEBUG_MODE
         debugf("\r\nPIT_MODE = %x", (uint16_t)PIT_MODE);
-#endif
         if (PIT_MODE) {
             DM6300_SetPower(POWER_MAX + 1, RF_FREQ, pwr_offset);
             cur_pwr = POWER_MAX + 1;
@@ -271,9 +267,7 @@ void msp_parse_vtx_config() {
     if (needSaveEEP)
         Setting_Save();
 
-#ifdef _DEBUG_MODE
-    debugf("\r\nparseMspVtx_V2 pwr:%x, pit:%x", (uint16_t)nxt_pwr, (uint16_t)fc_pit_rx);
-#endif
+    debugf("\r\nmsp_parse_vtx_config pwr:%x, pit:%x", (uint16_t)nxt_pwr, (uint16_t)fc_pit_rx);
 }
 
 void clear_screen() {
@@ -594,9 +588,7 @@ uint8_t msp_read_one_frame() {
             if (crc == rx) {
                 ret = msp_handle_cmd(cmd, payload_len);
             }
-#ifdef _DEBUG_MODE
             debugf("\r\ncrc : %x,%x", (uint16_t)crc, (uint16_t)rx);
-#endif
             full_frame = 1;
             state = MSP_HEADER_START;
             break;
@@ -953,9 +945,7 @@ void msp_set_vtx_config(uint8_t power, uint8_t save) {
     crc ^= 0x00; // disable table
     CMS_tx(crc);
 
-#ifdef _DEBUG_MODE
     debugf("\r\nmsp_set_vtx_config:F%x,P%x,M:%x", (uint16_t)RF_FREQ, (uint16_t)power, (uint16_t)PIT_MODE);
-#endif
 
     if (save)
         msp_eeprom_write();
@@ -1100,9 +1090,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
                 // SPI_Write(0x3, 0xd00, 0x00000003);
                 Init_6300RF(RF_FREQ, RF_POWER);
                 DM6300_AUXADC_Calib();
-#ifdef _DEBUG_MODE
                 debugf("\r\nExit 0mW\r\n");
-#endif
                 // debugf("\r\n exit0");
             }
         }
@@ -1540,19 +1528,15 @@ void set_vtx_param() {
             if (!pit_mode_cfg_done) {
                 if (vtx_pit_save == PIT_0MW) {
                     WriteReg(0, 0x8F, 0x10);
-// SPI_Write(0x6, 0xFF0, 0x00000018);
-// SPI_Write(0x3, 0xd00, 0x00000000);
-#ifdef _DEBUG_MODE
+                    // SPI_Write(0x6, 0xFF0, 0x00000018);
+                    // SPI_Write(0x3, 0xd00, 0x00000000);
                     debugf("\r\nDM6300 0mW");
-#endif
                     cur_pwr = POWER_MAX + 2;
                     temp_err = 1;
                 } else // if(vtx_pit_save == PIT_P1MW)
                 {
                     DM6300_SetPower(POWER_MAX + 1, RF_FREQ, 0);
-#ifdef _DEBUG_MODE
                     debugf("\r\nDM6300 P1mW");
-#endif
                     cur_pwr = POWER_MAX + 1;
                 }
                 pit_mode_cfg_done = 1;
@@ -1561,9 +1545,7 @@ void set_vtx_param() {
             if (!lp_mode_cfg_done) {
                 DM6300_SetPower(0, RF_FREQ, 0); // limit power to 25mW
                 cur_pwr = 0;
-#ifdef _DEBUG_MODE
                 debugf("\n\rEnter LP_MODE");
-#endif
                 lp_mode_cfg_done = 1;
             }
         }
@@ -1579,10 +1561,8 @@ void set_vtx_param() {
             vtx_pit = PIT_OFF;
             vtx_pit_save = PIT_OFF;
         } else if (PIT_MODE || LP_MODE) {
-// exit pitmode or lp_mode
-#ifdef _DEBUG_MDOE
+            // exit pitmode or lp_mode
             debugf("\n\rExit PIT or LP");
-#endif
 #ifndef VIDEO_PAT
 #ifdef VTX_L
             if (RF_POWER == 3 && !g_IS_ARMED)
@@ -1604,9 +1584,7 @@ void set_vtx_param() {
         if (LP_MODE == 1) {
             DM6300_SetPower(0, RF_FREQ, 0); // limit power to 25mW during disarmed
             cur_pwr = 0;
-#ifdef _DEBUG_MDOE
             debugf("\n\rEnter LP_MODE");
-#endif
         }
     }
 
@@ -1643,9 +1621,7 @@ void InitVtxTable() {
     uint8_t crc;
     uint8_t const *power_table[5];
 
-#ifdef _DEBUG_MODE
     debugf("\r\nInitVtxTable");
-#endif
 
     // set band num, channel num and power level number
     LP_MODE = fc_lp_rx;

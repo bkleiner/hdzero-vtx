@@ -212,9 +212,7 @@ void SA_Update(uint8_t cmd) {
                 if (last_SA_lock && seconds < WAIT_SA_CONFIG)
                     pwr_init = cur_pwr;
                 else {
-#ifdef _DEBUG_MDOE
                     debugf("\n\rExit 0mW");
-#endif
 
                     Init_6300RF(RF_FREQ, RF_POWER);
                     PIT_MODE = 0;

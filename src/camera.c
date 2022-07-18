@@ -110,9 +110,7 @@ uint8_t CamDetect() {
         else
             cameraID = 0;
 
-#ifdef _DEBUG_MODE
         debugf("\r\ncameraID: %x", (uint16_t)cameraID);
-#endif
     }
 
     return fps;
@@ -682,9 +680,8 @@ void SetCamCfg(cameraConfig_t *cfg, uint8_t INIT) {
         if (j == 1)
             Runcam_SetWB(cfg->wbRed, cfg->wbBlue, cfg->wbMode);
     }
-#ifdef _DEBUG_MODE
+
     debugf("\r\nSet camera parameter done!");
-#endif
 }
 
 void CameraInit() {

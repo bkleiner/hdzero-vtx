@@ -114,20 +114,19 @@ dm6300_reg_value_t dm6300_set_channel_regs[] = {
 };
 
 void DM6300_SetChannel(uint8_t ch) {
-#ifdef _DEBUG_MODE
-    debugf("\r\nset ch:%x", (uint16_t)ch);
-#endif
+    debugf("\r\nDM6300_SetChannel: %x", (uint16_t)ch);
 
     if (ch > 9)
         ch = 0;
-    /*#ifndef _RF_CALIB
-    #ifndef _DEBUG_MODE
+
+    /*
+    #ifndef _RF_CALIB
         else if(ch == 5) ch = 7;
         else if(ch == 6) ch = 5;
         else if(ch == 7) ch = 6;
     #endif
-    #endif
     */
+   
     dm6300_set_channel_regs[12].dat = 0x00008000 + (init6300_fcnt & 0xFF);
     dm6300_set_channel_regs[13].dat = init6300_fnum[ch];
 
@@ -147,9 +146,9 @@ void DM6300_SetPower(uint8_t pwr, uint8_t freq, uint8_t offset) {
     uint16_t a_tab[2] = {0x21F, 0x41F};
 #endif
     int16_t p;
-#ifdef _DEBUG_MODE
-    debugf("\r\nDM6300 set power:%x", (uint16_t)pwr);
-#endif
+
+    debugf("\r\nDM6300_SetPower: %x", (uint16_t)pwr);
+
     if (freq > 9)
         freq = 0;
     SPI_Write(0x6, 0xFF0, 0x00000018);
@@ -181,9 +180,7 @@ void DM6300_SetPower(uint8_t pwr, uint8_t freq, uint8_t offset) {
         SPI_Write(0x3, 0xD1C, (uint8_t)p);
     }
 
-#ifdef _DEBUG_MODE
-    debugf("\r\nDM6300 SetPower done.  %x, %x", (uint16_t)table_power[freq][pwr], offset);
-#endif
+    debugf("\r\nDM6300_SetPower done.  %x, %x", (uint16_t)table_power[freq][pwr], offset);
 }
 
 void DM6300_SetSingleTone(uint8_t enable) {
@@ -211,14 +208,13 @@ void DM6300_InitAUXADC() {
     int16_t dat1, dat2, dat3;
 
     SPI_Write(0x6, 0xFF0, 0x00000018);
+
     SPI_Read(0x3, 0x254, &dat);
-#ifdef _DEBUG_MODE
     debugf("\r\nDM6300 0x254 = %x%x.\r\n", (uint16_t)((dat >> 16) & 0xFFFF), (uint16_t)(dat & 0xFFFF));
-#endif
+
     dat |= 0x200;
-#ifdef _DEBUG_MODE
     debugf("\r\nDM6300 0x254 = %x%x.\r\n", (uint16_t)((dat >> 16) & 0xFFFF), (uint16_t)(dat & 0xFFFF));
-#endif
+
     SPI_Write(0x3, 0x254, dat);
 
     SPI_Write(0x6, 0xFF0, 0x00000019);
@@ -243,9 +239,7 @@ void DM6300_InitAUXADC() {
     dat3 = ((int32_t)dat) >> 20;
 
     auxadc_offset = dat3 - ((dat1 + dat2) >> 1);
-#ifdef _DEBUG_MODE
     debugf("\r\nDM6300 AUXADC Calib done. data1=%x, data2=%x, data3=%x, offset=%x", dat1, dat2, dat3, auxadc_offset);
-#endif
 }
 
 void DM6300_AUXADC_Calib() {
@@ -739,9 +733,7 @@ void DM6300_Init(uint8_t ch, BWType_e bw) {
     DM6300_EFUSE2();
 #endif
     SPI_Write(0x6, 0xFF0, 0x00000018);
-#ifdef _DEBUG_MODE
     debugf("\r\nDM6300 init done.");
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -956,9 +948,8 @@ void DM6300_EFUSE2() {
     for (i = 0; i < 4; i++) {
         version[i] = efuse.macro.m0.efuse_ver[i];
     }
-#ifdef _DEBUG_MODE
     debugf("\r\n version = %s", version);
-#endif
+
     // version[1];  //version[1] M.N---M
     // version[3];  //version[3] M.N---N
 
@@ -967,11 +958,9 @@ void DM6300_EFUSE2() {
     for (i = 0; i < efuse.macro.m0.band_num; i++) // find match macro 5.8G
                                                   // for(i=0; i<FREQ_MAX_EXT+1; i++) // find match macro 5.8G
     {
-// efuse.macro.m2[i].tx1.freq_start = (efuse.macro.m2[i].tx1.freq_start >> 8) | (efuse.macro.m2[i].tx1.freq_start << 8);
-// efuse.macro.m2[i].tx1.freq_stop = (efuse.macro.m2[i].tx1.freq_stop >> 8) | (efuse.macro.m2[i].tx1.freq_stop << 8);
-#ifdef _DEBUG_MODE
+        // efuse.macro.m2[i].tx1.freq_start = (efuse.macro.m2[i].tx1.freq_start >> 8) | (efuse.macro.m2[i].tx1.freq_start << 8);
+        // efuse.macro.m2[i].tx1.freq_stop = (efuse.macro.m2[i].tx1.freq_stop >> 8) | (efuse.macro.m2[i].tx1.freq_stop << 8);
         debugf("\r\n start=%x, stop=%x", efuse.macro.m2[i].tx1.freq_start, efuse.macro.m2[i].tx1.freq_stop);
-#endif
 
         if (efuse.macro.m2[i].tx1.freq_start >= 5000 && efuse.macro.m2[i].tx1.freq_stop <= 6000) {
             //*((volatile unsigned int *)0x200D08) = efuse.macro.m2[i].tx1.iqmismatch;
