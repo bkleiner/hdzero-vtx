@@ -12,6 +12,10 @@
 #include "spi.h"
 #include "uart.h"
 
+#ifdef _DEBUG_MODE
+
+#define MAX_CMD_LEN 30
+
 ///////////////////////////////////////////////
 // Global variables for this module only.
 // DO NOT TRY to use it outside the scope
@@ -25,7 +29,6 @@ XDATA_SEG uint8_t comment = 0;
 BIT_TYPE echo = 1;
 BIT_TYPE verbose = 1;
 
-#ifdef _DEBUG_MODE
 void MonHelp(void) {
     debugf("\r\nUsage: ");
     debugf("\r\n   w   addr  wdat   : Write reg_map register");
@@ -47,9 +50,7 @@ void MonHelp(void) {
     debugf("\r\n   h                : Help");
     debugf("\r\n");
 }
-#endif
 
-#ifdef _DEBUG_MODE
 uint8_t MonGetCommand(void) {
     uint8_t i, ch;
     uint8_t ret = 0;
@@ -156,9 +157,7 @@ uint8_t MonGetCommand(void) {
         return ret;
     }
 }
-#endif
 
-#ifdef _DEBUG_MODE
 void MonEE(uint8_t op, uint8_t d) {
     uint8_t val;
     uint8_t addr;
@@ -193,113 +192,7 @@ void MonEE(uint8_t op, uint8_t d) {
 
     DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
 }
-#endif
 
-void Monitor(void) {
-#ifdef _DEBUG_MODE
-    if (!MonGetCommand())
-        return;
-
-    if (!stricmp(argv[0], "w"))
-        MonWrite(0);
-    else if (!stricmp(argv[0], "r"))
-        MonRead(0);
-    else if (!stricmp(argv[0], "w2"))
-        MonWrite(1);
-    else if (!stricmp(argv[0], "r2"))
-        MonRead(1);
-    else if (!stricmp(argv[0], "ww"))
-        MonWrite(2);
-    else if (!stricmp(argv[0], "rr"))
-        MonRead(2);
-    else if (!stricmp(argv[0], "pat"))
-        chg_vtx();
-    else if (!stricmp(argv[0], "c"))
-        Init_6300RF(RF_FREQ, RF_POWER);
-    else if (!stricmp(argv[0], "rfrst")) {
-        WriteReg(0, 0x8F, 0x00);
-        WriteReg(0, 0x8F, 0x11);
-    } else if (!stricmp(argv[0], "rf1")) {
-        // WriteReg(0, 0x8F, 0x00);
-        // WriteReg(0, 0x8F, 0x11);
-        DM6300_init1();
-    } else if (!stricmp(argv[0], "rf2"))
-        DM6300_init2(0);
-    else if (!stricmp(argv[0], "rf3"))
-        DM6300_init3(RF_FREQ);
-    else if (!stricmp(argv[0], "rf4"))
-        DM6300_init4();
-    else if (!stricmp(argv[0], "rf5"))
-        DM6300_init5();
-    else if (!stricmp(argv[0], "rf6"))
-        DM6300_init6(0);
-    else if (!stricmp(argv[0], "rf7"))
-        DM6300_init7(0);
-    else if (!stricmp(argv[0], "efuse1")) {
-        DM6300_EFUSE1();
-        SPI_Write(0x6, 0xFF0, 0x00000018);
-    } else if (!stricmp(argv[0], "efuse2")) {
-        DM6300_EFUSE2();
-        SPI_Write(0x6, 0xFF0, 0x00000018);
-    } else if (!stricmp(argv[0], "rftest"))
-        DM6300_RFTest();
-    else if (!stricmp(argv[0], "bbon"))
-        WriteReg(0, 0x8F, 0x11);
-    else if (!stricmp(argv[0], "bboff"))
-        WriteReg(0, 0x8F, 0x01);
-    // else if ( !stricmp( argv[0], "m0" ) )
-    // DM6300_M0();
-    else if (!stricmp(argv[0], "ch")) {
-        if (argc == 3 && Asc2Bin(argv[1]) <= FREQ_MAX && Asc2Bin(argv[2]) <= POWER_MAX) {
-            RF_FREQ = Asc2Bin(argv[1]);
-            RF_POWER = Asc2Bin(argv[2]);
-            DM6300_SetChannel(RF_FREQ);
-            DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
-        }
-    } else if (!stricmp(argv[0], "ew"))
-        MonEE(0, Asc2Bin(argv[1]));
-    else if (!stricmp(argv[0], "er"))
-        MonEE(1, 0);
-    else if (!stricmp(argv[0], "ea"))
-        MonEE(2, 0);
-    else if (!stricmp(argv[0], "es"))
-        MonEE(3, 0);
-    else if (!stricmp(argv[0], "dc")) {
-        if (argc == 5) {
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x88, Asc2Bin(argv[1]));
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x89, Asc2Bin(argv[2]));
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8a, Asc2Bin(argv[3]));
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8b, Asc2Bin(argv[4]));
-            // debugf("\r\nWrite in eeprom, 0x88=%x,0x89=%x,0x8a=%x,0x8b=%x",
-            // Asc2Bin(argv[1]),Asc2Bin(argv[2]),Asc2Bin(argv[3]),Asc2Bin(argv[4]));
-        } else
-            debugf("   --> missing parameter!");
-    } else if (!stricmp(argv[0], "iq")) {
-        if (argc == 5) {
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8c, Asc2Bin(argv[1]));
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8d, Asc2Bin(argv[2]));
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8e, Asc2Bin(argv[3]));
-            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8f, Asc2Bin(argv[4]));
-            debugf("\r\nWrite in eeprom, 0x88=%x,0x89=%x,0x8a=%x,0x8b=%x",
-                   (uint16_t)Asc2Bin(argv[1]), (uint16_t)Asc2Bin(argv[2]), (uint16_t)Asc2Bin(argv[3]), (uint16_t)Asc2Bin(argv[4]));
-        } else
-            debugf("   --> missing parameter!");
-    } else if (!stricmp(argv[0], "v")) {
-        verbose = !verbose;
-        if (verbose)
-            debugf("\r\nVerbose on");
-        else
-            debugf("\r\nVerbose off");
-    } else if (!stricmp(argv[0], "h"))
-        MonHelp();
-    else
-        debugf("\r\nInvalid Command...");
-
-    Prompt();
-#endif
-}
-
-#ifdef _DEBUG_MODE
 void MonWrite(uint8_t mode) {
     uint16_t addr = 0;
     uint8_t value;
@@ -423,5 +316,107 @@ void chg_vtx(void) {
         DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
         debugf("\r\nVTX Pattern, channel = %d,power = %d,FPS = 1", (uint16_t)RF_FREQ, (uint16_t)RF_POWER);
     }
+}
+
+void Monitor(void) {
+    if (!MonGetCommand())
+        return;
+
+    if (!stricmp(argv[0], "w"))
+        MonWrite(0);
+    else if (!stricmp(argv[0], "r"))
+        MonRead(0);
+    else if (!stricmp(argv[0], "w2"))
+        MonWrite(1);
+    else if (!stricmp(argv[0], "r2"))
+        MonRead(1);
+    else if (!stricmp(argv[0], "ww"))
+        MonWrite(2);
+    else if (!stricmp(argv[0], "rr"))
+        MonRead(2);
+    else if (!stricmp(argv[0], "pat"))
+        chg_vtx();
+    else if (!stricmp(argv[0], "c"))
+        Init_6300RF(RF_FREQ, RF_POWER);
+    else if (!stricmp(argv[0], "rfrst")) {
+        WriteReg(0, 0x8F, 0x00);
+        WriteReg(0, 0x8F, 0x11);
+    } else if (!stricmp(argv[0], "rf1")) {
+        // WriteReg(0, 0x8F, 0x00);
+        // WriteReg(0, 0x8F, 0x11);
+        DM6300_init1();
+    } else if (!stricmp(argv[0], "rf2"))
+        DM6300_init2(0);
+    else if (!stricmp(argv[0], "rf3"))
+        DM6300_init3(RF_FREQ);
+    else if (!stricmp(argv[0], "rf4"))
+        DM6300_init4();
+    else if (!stricmp(argv[0], "rf5"))
+        DM6300_init5();
+    else if (!stricmp(argv[0], "rf6"))
+        DM6300_init6(0);
+    else if (!stricmp(argv[0], "rf7"))
+        DM6300_init7(0);
+    else if (!stricmp(argv[0], "efuse1")) {
+        DM6300_EFUSE1();
+        SPI_Write(0x6, 0xFF0, 0x00000018);
+    } else if (!stricmp(argv[0], "efuse2")) {
+        DM6300_EFUSE2();
+        SPI_Write(0x6, 0xFF0, 0x00000018);
+    } else if (!stricmp(argv[0], "rftest"))
+        DM6300_RFTest();
+    else if (!stricmp(argv[0], "bbon"))
+        WriteReg(0, 0x8F, 0x11);
+    else if (!stricmp(argv[0], "bboff"))
+        WriteReg(0, 0x8F, 0x01);
+    // else if ( !stricmp( argv[0], "m0" ) )
+    // DM6300_M0();
+    else if (!stricmp(argv[0], "ch")) {
+        if (argc == 3 && Asc2Bin(argv[1]) <= FREQ_MAX && Asc2Bin(argv[2]) <= POWER_MAX) {
+            RF_FREQ = Asc2Bin(argv[1]);
+            RF_POWER = Asc2Bin(argv[2]);
+            DM6300_SetChannel(RF_FREQ);
+            DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
+        }
+    } else if (!stricmp(argv[0], "ew"))
+        MonEE(0, Asc2Bin(argv[1]));
+    else if (!stricmp(argv[0], "er"))
+        MonEE(1, 0);
+    else if (!stricmp(argv[0], "ea"))
+        MonEE(2, 0);
+    else if (!stricmp(argv[0], "es"))
+        MonEE(3, 0);
+    else if (!stricmp(argv[0], "dc")) {
+        if (argc == 5) {
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x88, Asc2Bin(argv[1]));
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x89, Asc2Bin(argv[2]));
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8a, Asc2Bin(argv[3]));
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8b, Asc2Bin(argv[4]));
+            // debugf("\r\nWrite in eeprom, 0x88=%x,0x89=%x,0x8a=%x,0x8b=%x",
+            // Asc2Bin(argv[1]),Asc2Bin(argv[2]),Asc2Bin(argv[3]),Asc2Bin(argv[4]));
+        } else
+            debugf("   --> missing parameter!");
+    } else if (!stricmp(argv[0], "iq")) {
+        if (argc == 5) {
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8c, Asc2Bin(argv[1]));
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8d, Asc2Bin(argv[2]));
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8e, Asc2Bin(argv[3]));
+            I2C_Write8_Wait(10, ADDR_EEPROM, 0x8f, Asc2Bin(argv[4]));
+            debugf("\r\nWrite in eeprom, 0x88=%x,0x89=%x,0x8a=%x,0x8b=%x",
+                   (uint16_t)Asc2Bin(argv[1]), (uint16_t)Asc2Bin(argv[2]), (uint16_t)Asc2Bin(argv[3]), (uint16_t)Asc2Bin(argv[4]));
+        } else
+            debugf("   --> missing parameter!");
+    } else if (!stricmp(argv[0], "v")) {
+        verbose = !verbose;
+        if (verbose)
+            debugf("\r\nVerbose on");
+        else
+            debugf("\r\nVerbose off");
+    } else if (!stricmp(argv[0], "h"))
+        MonHelp();
+    else
+        debugf("\r\nInvalid Command...");
+
+    Prompt();
 }
 #endif

@@ -168,16 +168,12 @@ void Setting_Save() {
         rcv |= I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_LPMODE, LP_MODE);
         rcv |= I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_PITMODE, PIT_MODE);
         rcv |= I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_25MW, OFFSET_25MW);
-#ifdef _DEBUG_MODE
         if (!rcv)
             debugf("\r\nEEPROM write success");
-#endif
     }
 
-#ifdef _DEBUG_MODE
     debugf("\r\nSetting Save:  RF_FREQ=%d, RF_POWER=%d, LP_MODE=%d, PIT_MODE=%d",
            (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)LP_MODE, (uint16_t)PIT_MODE);
-#endif
 }
 
 void CFG_Back() {
@@ -197,9 +193,7 @@ void GetVtxParameter() {
 
     EE_VALID = !I2C_Write8_Wait(10, ADDR_EEPROM, 0x40, 0xFF);
 
-#ifdef _DEBUG_MODE
     debugf("\r\nEE_VALID:%x", (uint16_t)EE_VALID);
-#endif
 
     if (EE_VALID) { // eeprom valid
 
@@ -220,9 +214,7 @@ void GetVtxParameter() {
         }
 
         if (ee_vld) {
-#ifdef _DEBUG_MODE
             debugf("\r\nUSE EEPROM for rf_pwr_tab.");
-#endif
             for (i = 0; i <= FREQ_MAX; i++) {
                 for (j = 0; j <= POWER_MAX; j++) {
                     table_power[i][j] = tab[i][j];
@@ -243,9 +235,7 @@ void GetVtxParameter() {
                 }
             }
         } else {
-#ifdef _DEBUG_MODE
             debugf("\r\nEEPROM is NOT initialized. Use default rf_pwr_tab.");
-#endif
 
 #ifdef _RF_CALIB
             for (i = 0; i <= FREQ_MAX; i++) {
@@ -270,14 +260,10 @@ void GetVtxParameter() {
             I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_LPMODE, LP_MODE);
             I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_PITMODE, PIT_MODE);
             I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_25MW, OFFSET_25MW);
-#ifdef _DEBUG_MODE
             debugf("\r\nEEPROM is NOT initialized. USE CAM for VTX setting.");
-#endif
         } else {
             CFG_Back();
-#ifdef _DEBUG_MODE
             debugf("\r\nUSE EEPROM for VTX setting:RF_FREQ=%d, RF_POWER=%d, LPMODE=%d PIT_MODE=%d", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)LP_MODE, (uint16_t)PIT_MODE);
-#endif
         }
 
 // last_SA_lock
@@ -288,9 +274,7 @@ void GetVtxParameter() {
             last_SA_lock = 0;
             I2C_Write8(ADDR_EEPROM, EEP_ADDR_SA_LOCK, last_SA_lock);
         }
-#ifdef _DEBUG_MODE
         debugf("\r\nlast_SA_lock %x", (uint16_t)last_SA_lock);
-#endif
 #endif
 
 #ifdef VTX_L
@@ -308,9 +292,7 @@ void GetVtxParameter() {
         }
 
         if (flash_vld) { // flash valid
-#ifdef _DEBUG_MODE
             debugf("\r\nUse Flash rf_pwr_tab space.");
-#endif
             for (i = 0; i <= FREQ_MAX; i++) {
                 for (j = 0; j <= POWER_MAX; j++) {
                     table_power[i][j] = tab[i][j];
@@ -328,23 +310,18 @@ void GetVtxParameter() {
                     table_power[9][j] += 0x0C;
                 }
             }
-        }
-#ifdef _DEBUG_MODE
-        else
+        } else
             debugf("\r\nUse default rf_pwr_tab.");
 
         debugf("\r\nUSE CAM for VTX setting.");
-#endif
     }
 
-#ifdef _DEBUG_MODE
     for (i = 0; i <= FREQ_MAX_EXT; i++) {
         debugf("\r\nrf_pwr_tab[%d]=", (uint16_t)i);
         for (j = 0; j <= POWER_MAX; j++)
             debugf(" %x", (uint16_t)table_power[i][j]);
     }
     debugf("\r\nUSE EEPROM for VTX setting:RF_FREQ=%d, RF_POWER=%d, LPMODE=%d PIT_MODE=%d", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)LP_MODE, (uint16_t)PIT_MODE);
-#endif
 }
 
 void Init_6300RF(uint8_t freq, uint8_t pwr) {
@@ -461,10 +438,8 @@ void TempDetect() {
 
             temp0 = temp0 - (temp0 >> 2) + temp_new0;
 
-#ifdef _DEBUG_MODE
-// verbosef("\r\ntempADC  detect: temp = %d, temp_new = %d", (uint16_t)(temperature>>2), (uint16_t)temp_new);
-// verbosef("\r\ntemp6300 detect: temp = 0x%x, temp_new = 0x%x", (uint16_t)(temp0>>2), (uint16_t)temp_new0);
-#endif
+            // verbosef("\r\ntempADC  detect: temp = %d, temp_new = %d", (uint16_t)(temperature>>2), (uint16_t)temp_new);
+            // verbosef("\r\ntemp6300 detect: temp = 0x%x, temp_new = 0x%x", (uint16_t)(temp0>>2), (uint16_t)temp_new0);
         }
     }
 }
@@ -484,9 +459,7 @@ void TempDetect() {
             temp_new = DM6300_GetTemp();
             temperature = temperature - (temperature >> 2) + temp_new;
 
-#ifdef _DEBUG_MODE
-// verbosef("\r\ntemp detect: temp = %x, temp_new = %x", (uint16_t)(temperature>>2), (uint16_t)temp_new);
-#endif
+            // verbosef("\r\ntemp detect: temp = %x, temp_new = %x", (uint16_t)(temperature>>2), (uint16_t)temp_new);
         }
     }
 }
@@ -554,10 +527,8 @@ void PowerAutoSwitch() {
         ;
     else {
         DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
-#ifdef _DEBUG_MODE
         verbosef("\r\nPowerAutoSwitch: temp = %x%x, ", (uint16_t)(temp >> 8), (uint16_t)(temp & 0xff));
         verbosef("pwr_offset = %d", (uint16_t)pwr_offset);
-#endif
         cur_pwr = RF_POWER;
     }
 }
@@ -661,15 +632,11 @@ void PowerAutoSwitch() {
         pwr_offset = 10;
 
     if (last_ofs != pwr_offset) {
-#ifdef _DEBUG_MODE
         verbosef("\r\nPowerAutoSwitch:Yes %x %x", temp, (uint16_t)pwr_offset);
-#endif
         DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
         cur_pwr = RF_POWER;
     } else {
-#ifdef _DEBUG_MODE
         verbosef("\r\nPowerAutoSwitch: No %x %x", temp, (uint16_t)pwr_offset);
-#endif
     }
 
     last_ofs = pwr_offset;
@@ -697,12 +664,10 @@ void HeatProtect() {
                     sec = 0;
                     temp = temperature >> 2;
 // temp = temperature >> 5;  //LM75AD
-#ifdef _DEBUG_MODE
 #ifdef VTX_L
                     verbosef("\r\nHeat detect: temp = %d, pwr_offset=%d", (uint16_t)temp, (uint16_t)pwr_offset);
 #else
                     verbosef("\r\nHeat Protect detect: %x", temp);
-#endif
 #endif
 
 #ifdef VTX_L
@@ -721,9 +686,7 @@ void HeatProtect() {
 #endif
                         cnt++;
                         if (cnt == 3) {
-#ifdef _DEBUG_MODE
                             debugf("\r\nHeat Protect.");
-#endif
                             heat_protect = 1;
 #ifdef VTX_L
                             WriteReg(0, 0x8F, 0x00);
@@ -799,9 +762,7 @@ void PwrLMT() {
                     }
 #endif
 
-#ifdef _DEBUG_MODE
                     debugf("\r\npwr_lmt_sec %x", (uint16_t)pwr_lmt_sec);
-#endif
                     if (pwr_lmt_sec >= PWR_LMT_SEC) {
                         DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
                         cur_pwr = RF_POWER;
@@ -810,9 +771,7 @@ void PwrLMT() {
                         // test: power init reset
                         p_init = 1;
 
-#ifdef _DEBUG_MODE
                         debugf("\r\nPower limit done.");
-#endif
                         Prompt();
                     }
                 }
@@ -869,9 +828,7 @@ void PwrLMT() {
                         }
 #endif // VTX_L
 
-#ifdef _DEBUG_MODE
                         debugf("\r\npwr_lmt_sec %x", (uint16_t)pwr_lmt_sec);
-#endif
                         if (pwr_lmt_sec >= PWR_LMT_SEC) {
                             DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
                             cur_pwr = RF_POWER;
@@ -880,9 +837,7 @@ void PwrLMT() {
                             // test: power init reset
                             p_init = 1;
 
-#ifdef _DEBUG_MODE
                             debugf("\r\nPower limit done.");
-#endif
                             Prompt();
                         }
                     }
@@ -976,9 +931,7 @@ void Button1_SP() {
 
         // exit 0mW
         if (vtx_pit_save == PIT_0MW) {
-#ifdef _DEBUG_MODE
             debugf("\n\rcfg_step(0),DM6300 init");
-#endif
             Init_6300RF(RF_FREQ, RF_POWER);
             DM6300_AUXADC_Calib();
             cur_pwr = RF_POWER;
@@ -990,9 +943,7 @@ void Button1_SP() {
     case 1:
         // exit 0mW
         if (vtx_pit_save == PIT_0MW) {
-#ifdef _DEBUG_MODE
             debugf("\n\rcfg_step(1),DM6300 init");
-#endif
             Init_6300RF(RF_FREQ, RF_POWER);
             DM6300_AUXADC_Calib();
             cur_pwr = RF_POWER;
@@ -1022,10 +973,8 @@ void Button1_SP() {
         break;
     case 2:
         if (vtx_pit_save == PIT_0MW) {
-// exit 0mW
-#ifdef _DEBUG_MODE
+            // exit 0mW
             debugf("\n\rcfg_step(2),DM6300 init");
-#endif
             Init_6300RF(RF_FREQ, RF_POWER);
             DM6300_AUXADC_Calib();
             cur_pwr = RF_POWER;
@@ -1065,10 +1014,8 @@ void Button1_SP() {
         break;
     case 3:
         if (vtx_pit_save == PIT_0MW) {
-// exit 0mW
-#ifdef _DEBUG_MODE
+            // exit 0mW
             debugf("\n\rcfg_step(3),DM6300 init");
-#endif
             Init_6300RF(RF_FREQ, RF_POWER);
             DM6300_AUXADC_Calib();
             cur_pwr = RF_POWER;
@@ -1084,9 +1031,7 @@ void Button1_SP() {
         if (LP_MODE) {
             DM6300_SetPower(0, RF_FREQ, 0); // limit power to 25mW
             cur_pwr = 0;
-#ifdef _DEBUG_MODE
             debugf("\n\rEnter LP_MODE");
-#endif
         } else {
             DM6300_SetPower(RF_POWER, RF_FREQ, 0);
         }
@@ -1100,9 +1045,7 @@ void Button1_SP() {
 }
 
 void Button1_LP() {
-#ifdef _DEBUG_MODE
     debugf("\r\nButton1_LP.");
-#endif
     cfg_to_cnt = 0;
     switch (cfg_step) {
     case 0:
@@ -1126,9 +1069,7 @@ void Button1_LP() {
 }
 
 void Button1_LLP() {
-#ifdef _DEBUG_MODE
     debugf("\r\nButton1_LLP.");
-#endif
     cfg_to_cnt = 0;
     if (cfg_step == 0) {
         cfg_step = 3;
@@ -1197,9 +1138,7 @@ void CFGTimeout() {
                 cfg_step = 0;
 
                 Init_MAX7315(0xFF);
-#ifdef _DEBUG_MODE
                 debugf("\r\nCFG Timeout.");
-#endif
                 Prompt();
             }
         }

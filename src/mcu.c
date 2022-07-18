@@ -91,12 +91,10 @@ void main(void) {
     WriteReg(0, 0x80, 0xC8);
     // WAIT(100);
 
-#ifdef _DEBUG_MODE
     debugf("\r\n========================================================");
     debugf("\r\n     >>>             Divimath DM568X            <<<     ");
     debugf("\r\n========================================================");
     debugf("\r\n");
-#endif
 
     Init_HW(); // init
     fc_init(); // init displayport
@@ -177,9 +175,7 @@ void SA_Delay_init() {
     if (SA_saved == 0) {
         if (seconds >= WAIT_SA_CONFIG) {
             I2C_Write8(ADDR_EEPROM, EEP_ADDR_SA_LOCK, SA_lock);
-#ifdef _DEBUG_MODE
             debugf("\r\nSave SA_lock(%x) to EEPROM", (uint16_t)SA_lock);
-#endif
             SA_saved = 1;
         }
     }
@@ -187,9 +183,7 @@ void SA_Delay_init() {
     // init_rf
     if (SA_init_done == 0) {
         if (last_SA_lock && seconds >= WAIT_SA_CONFIG) {
-#ifdef _DEBUG_MODE
             debugf("\r\nInit RF");
-#endif
             pwr_lmt_sec = PWR_LMT_SEC;
             SA_init_done = 1;
             if (SA_lock) {
@@ -199,35 +193,25 @@ void SA_Delay_init() {
                     RF_POWER = POWER_MAX + 1;
                     Init_6300RF(ch_init, RF_POWER);
                     PIT_MODE = PIT_0MW;
-#ifdef _DEBUG_MODE
                     debugf("\r\n SA_dbm:%x", (uint16_t)SA_dbm);
                     debugf("\r\n ch%x, pwr%x", (uint16_t)ch_init, (uint16_t)pwr_init);
-#endif
 #else
                     RF_POWER = POWER_MAX + 2;
                     cur_pwr = POWER_MAX + 2;
 #endif
                 } else if (PIT_MODE) {
                     Init_6300RF(ch_init, POWER_MAX + 1);
-#ifdef _DEBUG_MODE
                     debugf("\r\n ch%x, pwr%x", (uint16_t)ch_init, (uint16_t)cur_pwr);
-#endif
                 } else {
                     Init_6300RF(ch_init, pwr_init);
-#ifdef _DEBUG_MODE
                     debugf("\r\n ch%x, pwr%x", (uint16_t)ch_init, (uint16_t)cur_pwr);
-#endif
                 }
             } else if (PIT_MODE) {
                 Init_6300RF(RF_FREQ, POWER_MAX + 1);
-#ifdef _DEBUG_MODE
                 debugf("\r\n ch%x, pwr%x", (uint16_t)RF_FREQ, (uint16_t)cur_pwr);
-#endif
             } else {
                 Init_6300RF(RF_FREQ, 0);
-#ifdef _DEBUG_MODE
                 debugf("\r\n ch%x, pwr%x", (uint16_t)RF_FREQ, 0);
-#endif
             }
 
             DM6300_AUXADC_Calib();
