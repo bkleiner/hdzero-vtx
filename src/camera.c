@@ -8,19 +8,31 @@
 #include "msp_displayport.h"
 #include "print.h"
 
-uint8_t cameraID = 0;
-uint8_t camProfile_EEP;
-uint8_t camProfile;
-uint8_t camProfile_Menu;
-cameraConfig_t camCfg;
-cameraConfig_t camCfg_Menu;
-cameraConfig_t camCfg_Cur;
-cameraConfig_t camCfg_EEP[RUNCAM_PROFILE_M_TYPE];
+uint8_t camera_id = 0;
+uint8_t cam_4_3 = 0;
+
+/*
+RUNCAM_PROFILE_M_TYPE==>
+    0: Micro V1 M
+    1: Micro V2 M
+    2: Nano V2 M
+    3: Nano lite M
+*/
+uint8_t camera_mode = CAM_720P60;
+
+uint8_t cam_profile_eep;
+uint8_t cam_profile;
+uint8_t cam_profile_menu;
+cameraConfig_t cam_cfg;
+cameraConfig_t cam_cfg_menu;
+cameraConfig_t cam_cfg_cur;
+cameraConfig_t cam_cfg_eep[RUNCAM_PROFILE_M_TYPE];
+uint8_t cam_menu_status = CAM_STATUS_IDLE;
 
 // {brightness, sharpness, saturation, contrast, hvFlip, nightMode, wbMode,
 //  wbRed[0], wbRed[1], wbRed[2], wbRed[3],
 //  wbBlue[0], wbBlue[1], wbBlue[2], wbBlue[3],}
-const uint8_t camParameterInit[RUNCAM_PROFILE_M_TYPE][15] =
+const uint8_t cam_parameter_init[RUNCAM_PROFILE_M_TYPE][15] =
     {
         // Micro V1
         {0x80, 0x01, 0x03, 0x01, 0x00, 0x01, 0x00,
@@ -43,22 +55,10 @@ const uint8_t camParameterInit[RUNCAM_PROFILE_M_TYPE][15] =
          0xCA, 0xCA, 0xCA, 0xCA},
 };
 
-uint8_t CAM_MODE = CAM_720P60;
-/*
-RUNCAM_PROFILE_M_TYPE==>
-    0: Micro V1 M
-    1: Micro V2 M
-    2: Nano V2 M
-    3: Nano lite M
-*/
-uint8_t cam_4_3 = 0;
-uint8_t camMenuStatus = CAM_STATUS_IDLE;
-uint8_t bw_changed = 0;
+void camera_menu_string_update(uint8_t status);
+void camera_menu_set_vdo_ratio_init();
 
-void camMenuStringUpdate(uint8_t status);
-void camMenuSetVdoRatioInit();
-
-uint8_t CamDetect() {
+uint8_t camera_detect() {
     int fps = CAM_720P60;
     uint8_t cycles = 4;
     uint8_t loss = 0;
@@ -71,17 +71,17 @@ uint8_t CamDetect() {
         if (fps == CAM_720P50) {
             Init_TC3587();
             Set_720P50(IS_RX);
-            debugf("\r\nCamDetect: Set 50fps.");
+            debugf("\r\ncamera_detect: Set 50fps.");
         } else if (fps == CAM_720P60) {
             Init_TC3587();
             Set_720P60(IS_RX);
-            debugf("\r\nCamDetect: Set 60fps.");
+            debugf("\r\ncamera_detect: Set 60fps.");
         }
         WAIT(100);
 
         for (detect_tries = 0; detect_tries < 5; detect_tries++) {
             status_reg = ReadReg(0, 0x02);
-            debugf("\r\nCamDetect status_reg: %x", status_reg);
+            debugf("\r\ncamera_detect status_reg: %x", status_reg);
 
             if ((status_reg >> 4) != 0) {
                 loss = 1;
@@ -103,19 +103,19 @@ uint8_t CamDetect() {
         Set_720P60(IS_RX);
         I2C_Write16(ADDR_TC3587, 0x0058, 0x00e0);
         if (!RUNCAM_Write(RUNCAM_MICRO_V1, 0x50, 0x0452484E))
-            cameraID = RUNCAM_MICRO_V1;
+            camera_id = RUNCAM_MICRO_V1;
         else if (!RUNCAM_Write(RUNCAM_MICRO_V2, 0x50, 0x0452484E))
-            cameraID = RUNCAM_MICRO_V2;
+            camera_id = RUNCAM_MICRO_V2;
         else
-            cameraID = 0;
+            camera_id = 0;
 
-        debugf("\r\ncameraID: %x", (uint16_t)cameraID);
+        debugf("\r\ncamera_id: %x", (uint16_t)camera_id);
     }
 
     return fps;
 }
 
-void Cam_Button_INIT() {
+void camera_button_init() {
     WriteReg(0, 0x17, 0xC0);
     WriteReg(0, 0x16, 0x00);
     WriteReg(0, 0x15, 0x02);
@@ -124,15 +124,15 @@ void Cam_Button_INIT() {
 
 /////////////////////////////////////////////////////////////////
 // runcam config
-void Runcam_SetBrightness(uint8_t val) {
+void runcam_set_brightness(uint8_t val) {
     uint32_t d = 0x04004800;
     uint32_t val_32;
 
-    camCfg_Cur.brightness = val;
+    cam_cfg_cur.brightness = val;
 
-    if (cameraID == RUNCAM_MICRO_V1)
+    if (camera_id == RUNCAM_MICRO_V1)
         d = 0x0452484e;
-    else if (cameraID == RUNCAM_MICRO_V2)
+    else if (camera_id == RUNCAM_MICRO_V2)
         d = 0x04504850;
 
     val_32 = (uint32_t)val;
@@ -145,50 +145,50 @@ void Runcam_SetBrightness(uint8_t val) {
     d += (val_32 << 16);
     d -= ((uint32_t)CAM_BRIGHTNESS_INITIAL << 16);
 
-    RUNCAM_Write(cameraID, 0x50, d);
+    RUNCAM_Write(camera_id, 0x50, d);
 #ifdef _DEBUG_CAMERA
     debugf("\r\nRUNCAM brightness:%x", (uint16_t)val);
 #endif
 }
 
-void Runcam_SetSharpness(uint8_t val) {
+void runcam_set_sharpness(uint8_t val) {
     uint32_t d = 0;
 
-    camCfg_Cur.sharpness = val;
+    cam_cfg_cur.sharpness = val;
 
-    if (cameraID == RUNCAM_MICRO_V1)
+    if (camera_id == RUNCAM_MICRO_V1)
         d = 0x03FF0100;
-    else if (cameraID == RUNCAM_MICRO_V2)
+    else if (camera_id == RUNCAM_MICRO_V2)
         d = 0x03FF0000;
 
     if (val == 2) {
-        RUNCAM_Write(cameraID, 0x0003C4, 0x03FF0000);
-        RUNCAM_Write(cameraID, 0x0003CC, 0x28303840);
-        RUNCAM_Write(cameraID, 0x0003D8, 0x28303840);
+        RUNCAM_Write(camera_id, 0x0003C4, 0x03FF0000);
+        RUNCAM_Write(camera_id, 0x0003CC, 0x28303840);
+        RUNCAM_Write(camera_id, 0x0003D8, 0x28303840);
     } else if (val == 1) {
-        RUNCAM_Write(cameraID, 0x0003C4, 0x03FF0000);
-        RUNCAM_Write(cameraID, 0x0003CC, 0x14181C20);
-        RUNCAM_Write(cameraID, 0x0003D8, 0x14181C20);
+        RUNCAM_Write(camera_id, 0x0003C4, 0x03FF0000);
+        RUNCAM_Write(camera_id, 0x0003CC, 0x14181C20);
+        RUNCAM_Write(camera_id, 0x0003D8, 0x14181C20);
     } else if (val == 0) {
-        RUNCAM_Write(cameraID, 0x0003C4, d);
-        RUNCAM_Write(cameraID, 0x0003CC, 0x0A0C0E10);
-        RUNCAM_Write(cameraID, 0x0003D8, 0x0A0C0E10);
+        RUNCAM_Write(camera_id, 0x0003C4, d);
+        RUNCAM_Write(camera_id, 0x0003CC, 0x0A0C0E10);
+        RUNCAM_Write(camera_id, 0x0003D8, 0x0A0C0E10);
     }
 #ifdef _DEBUG_CAMERA
     debugf("\r\nRUNCAM sharpness:%x", (uint16_t)val);
 #endif
 }
 
-uint8_t Runcam_SetSaturation(uint8_t val) {
+uint8_t runcam_set_saturation(uint8_t val) {
     uint8_t ret = 1;
     uint32_t d = 0x20242626;
 
-    camCfg_Cur.saturation = val;
+    cam_cfg_cur.saturation = val;
 
     // initial
-    if (cameraID == RUNCAM_MICRO_V1)
+    if (camera_id == RUNCAM_MICRO_V1)
         d = 0x20242626;
-    else if (cameraID == RUNCAM_MICRO_V2)
+    else if (camera_id == RUNCAM_MICRO_V2)
         d = 0x24282c30;
 
     if (val == 0)
@@ -209,18 +209,18 @@ uint8_t Runcam_SetSaturation(uint8_t val) {
     debugf("\r\nRUNCAM saturation:%x", (uint16_t)val);
 #endif
 
-    ret = RUNCAM_Write(cameraID, 0x0003A4, d);
+    ret = RUNCAM_Write(camera_id, 0x0003A4, d);
     return ret;
 }
 
-void Runcam_SetContrast(uint8_t val) {
+void runcam_set_contrast(uint8_t val) {
     uint32_t d = 0x46484A4C;
 
-    camCfg_Cur.contrast = val;
+    cam_cfg_cur.contrast = val;
 
-    if (cameraID == RUNCAM_MICRO_V1)
+    if (camera_id == RUNCAM_MICRO_V1)
         d = 0x46484A4C;
-    else if (cameraID == RUNCAM_MICRO_V2)
+    else if (camera_id == RUNCAM_MICRO_V2)
         d = 0x36383a3c;
 
     if (val == 0) // low
@@ -230,37 +230,37 @@ void Runcam_SetContrast(uint8_t val) {
     else if (val == 2) // high
         d += 0x04040404;
 
-    RUNCAM_Write(cameraID, 0x00038C, d);
+    RUNCAM_Write(camera_id, 0x00038C, d);
 #ifdef _DEBUG_CAMERA
     debugf("\r\nRUNCAM contrast:%x", (uint16_t)val);
 #endif
 }
 
-void Runcam_SetVdoRatio(uint8_t ratio) {
+void runcam_set_vdo_ratio(uint8_t ratio) {
     /*
         0: 720p60 4:3 default
         1: 720p60 16:9 crop
         2: 720p30 16:9 fill
     */
-    if (cameraID != RUNCAM_MICRO_V2)
+    if (camera_id != RUNCAM_MICRO_V2)
         return;
     if (ratio == 0)
-        RUNCAM_Write(cameraID, 0x000008, 0x0008910B);
+        RUNCAM_Write(camera_id, 0x000008, 0x0008910B);
     else if (ratio == 1)
-        RUNCAM_Write(cameraID, 0x000008, 0x00089102);
+        RUNCAM_Write(camera_id, 0x000008, 0x00089102);
     else if (ratio == 2)
-        RUNCAM_Write(cameraID, 0x000008, 0x00089110);
+        RUNCAM_Write(camera_id, 0x000008, 0x00089110);
 
     // save
-    RUNCAM_Write(cameraID, 0x000694, 0x00000310);
-    RUNCAM_Write(cameraID, 0x000694, 0x00000311);
+    RUNCAM_Write(camera_id, 0x000694, 0x00000310);
+    RUNCAM_Write(camera_id, 0x000694, 0x00000311);
 #ifdef _DEBUG_CAMERA
     debugf("\r\nRUNCAM VdoRatio:%x", (uint16_t)ratio);
 #endif
 }
 
 #if (0)
-uint8_t Runcam_GetVdoFormat(uint8_t cameraID) {
+uint8_t runcam_get_vdo_format(uint8_t camera_id) {
     /*
         0: 720p60 16:9
         0: 720p60 4:3
@@ -270,11 +270,11 @@ uint8_t Runcam_GetVdoFormat(uint8_t cameraID) {
     uint32_t val;
     uint8_t ret = 2;
 
-    if (cameraID != RUNCAM_MICRO_V2)
+    if (camera_id != RUNCAM_MICRO_V2)
         return ret;
 
     while (ret == 2) {
-        val = RUNCAM_Read(cameraID, 0x000008);
+        val = RUNCAM_Read(camera_id, 0x000008);
         if (val == 0x00089102) { // 720p60  16:9
             ret = 0;
             cam_4_3 = 0;
@@ -305,59 +305,59 @@ uint8_t Runcam_GetVdoFormat(uint8_t cameraID) {
 }
 #endif
 
-void Runcam_SetHVFlip(uint8_t val) {
-    if (cameraID != RUNCAM_MICRO_V2)
+void runcam_set_hv_flip(uint8_t val) {
+    if (camera_id != RUNCAM_MICRO_V2)
         return;
 
-    camCfg_Cur.hvFlip = val;
+    cam_cfg_cur.hvFlip = val;
 
     if (val == 0)
-        RUNCAM_Write(cameraID, 0x000040, 0x0022ffa9);
+        RUNCAM_Write(camera_id, 0x000040, 0x0022ffa9);
     else if (val == 1)
-        RUNCAM_Write(cameraID, 0x000040, 0x002effa9);
+        RUNCAM_Write(camera_id, 0x000040, 0x002effa9);
 }
 
-void Runcam_SetNightMode(uint8_t val) {
+void runcam_set_night_mode(uint8_t val) {
     /*
         0: night mode off
         1: night mode on
     */
-    if (cameraID != RUNCAM_MICRO_V2)
+    if (camera_id != RUNCAM_MICRO_V2)
         return;
 
-    camCfg_Cur.nightMode = val;
+    cam_cfg_cur.nightMode = val;
 
     if (val == 1) { // Max gain on
-        RUNCAM_Write(cameraID, 0x000070, 0x10000040);
-        // RUNCAM_Write(cameraID, 0x000070, 0x04000040);
-        RUNCAM_Write(cameraID, 0x000718, 0x28002700);
-        RUNCAM_Write(cameraID, 0x00071c, 0x29002800);
-        RUNCAM_Write(cameraID, 0x000720, 0x29002900);
+        RUNCAM_Write(camera_id, 0x000070, 0x10000040);
+        // RUNCAM_Write(camera_id, 0x000070, 0x04000040);
+        RUNCAM_Write(camera_id, 0x000718, 0x28002700);
+        RUNCAM_Write(camera_id, 0x00071c, 0x29002800);
+        RUNCAM_Write(camera_id, 0x000720, 0x29002900);
     } else if (val == 0) { // Max gain off
-        RUNCAM_Write(cameraID, 0x000070, 0x10000040);
-        // RUNCAM_Write(cameraID, 0x000070, 0x04000040);
-        RUNCAM_Write(cameraID, 0x000718, 0x30002900);
-        RUNCAM_Write(cameraID, 0x00071c, 0x32003100);
-        RUNCAM_Write(cameraID, 0x000720, 0x34003300);
+        RUNCAM_Write(camera_id, 0x000070, 0x10000040);
+        // RUNCAM_Write(camera_id, 0x000070, 0x04000040);
+        RUNCAM_Write(camera_id, 0x000718, 0x30002900);
+        RUNCAM_Write(camera_id, 0x00071c, 0x32003100);
+        RUNCAM_Write(camera_id, 0x000720, 0x34003300);
     }
 
     // save
-    RUNCAM_Write(cameraID, 0x000694, 0x00000310);
-    RUNCAM_Write(cameraID, 0x000694, 0x00000311);
+    RUNCAM_Write(camera_id, 0x000694, 0x00000310);
+    RUNCAM_Write(camera_id, 0x000694, 0x00000311);
 #ifdef _DEBUG_CAMERA
     debugf("\r\nRUNCAM NightMode:%x", (uint16_t)val);
 #endif
 }
 
-void Runcam_SetWB(uint8_t *wbRed, uint8_t *wbBlue, uint8_t wbMode) {
+void runcam_set_wb(uint8_t *wbRed, uint8_t *wbBlue, uint8_t wbMode) {
     uint32_t wbRed_u32 = 0x02000000;
     uint32_t wbBlue_u32 = 0x00000000;
     uint8_t i;
 
-    camCfg_Cur.wbMode = wbMode;
+    cam_cfg_cur.wbMode = wbMode;
     for (i = 0; i < WBMODE_MAX; i++) {
-        camCfg_Cur.wbRed[i] = wbRed[i];
-        camCfg_Cur.wbBlue[i] = wbBlue[i];
+        cam_cfg_cur.wbRed[i] = wbRed[i];
+        cam_cfg_cur.wbBlue[i] = wbBlue[i];
     }
 
     if (wbMode) {
@@ -368,11 +368,11 @@ void Runcam_SetWB(uint8_t *wbRed, uint8_t *wbBlue, uint8_t wbMode) {
     }
 
     if (wbMode) { // MWB
-        RUNCAM_Write(cameraID, 0x0001b8, 0x020b007b);
-        RUNCAM_Write(cameraID, 0x000204, wbRed_u32);
-        RUNCAM_Write(cameraID, 0x000208, wbBlue_u32);
+        RUNCAM_Write(camera_id, 0x0001b8, 0x020b007b);
+        RUNCAM_Write(camera_id, 0x000204, wbRed_u32);
+        RUNCAM_Write(camera_id, 0x000208, wbBlue_u32);
     } else { // AWB
-        RUNCAM_Write(cameraID, 0x0001b8, 0x020b0079);
+        RUNCAM_Write(camera_id, 0x0001b8, 0x020b0079);
     }
 }
 
@@ -388,84 +388,84 @@ void camera_check_and_save_parameters() {
     uint8_t i = 0;
     uint8_t j = 0;
 
-    if (cameraID == 0)
+    if (camera_id == 0)
         return;
 
-    if ((camProfile_EEP & 0x0F) > 1) {
-        camProfile_EEP = (camProfile_EEP & 0xF0);
+    if ((cam_profile_eep & 0x0F) > 1) {
+        cam_profile_eep = (cam_profile_eep & 0xF0);
     }
 
-    if (((camProfile_EEP >> 4) & 0xF) > 5) {
-        camProfile_EEP = camProfile_EEP & 0x01;
+    if (((cam_profile_eep >> 4) & 0xF) > 5) {
+        cam_profile_eep = cam_profile_eep & 0x01;
     }
 
     for (i = 0; i < RUNCAM_PROFILE_M_TYPE; i++) {
-        if (camCfg_EEP[i].brightness < BRIGHTNESS_MIN || camCfg_EEP[i].brightness > BRIGHTNESS_MIN) {
-            camCfg_EEP[i].brightness = camParameterInit[i][0];
+        if (cam_cfg_eep[i].brightness < BRIGHTNESS_MIN || cam_cfg_eep[i].brightness > BRIGHTNESS_MIN) {
+            cam_cfg_eep[i].brightness = cam_parameter_init[i][0];
         }
 
-        if (camCfg_EEP[i].sharpness > SHARPNESS_MAX) {
-            camCfg_EEP[i].sharpness = camParameterInit[i][1];
+        if (cam_cfg_eep[i].sharpness > SHARPNESS_MAX) {
+            cam_cfg_eep[i].sharpness = cam_parameter_init[i][1];
         }
 
-        if (camCfg_EEP[i].saturation > SATURATION_MAX) {
-            camCfg_EEP[i].saturation = camParameterInit[i][2];
+        if (cam_cfg_eep[i].saturation > SATURATION_MAX) {
+            cam_cfg_eep[i].saturation = cam_parameter_init[i][2];
         }
 
-        if (camCfg_EEP[i].contrast > CONTRAST_MAX) {
-            camCfg_EEP[i].contrast = camParameterInit[i][3];
+        if (cam_cfg_eep[i].contrast > CONTRAST_MAX) {
+            cam_cfg_eep[i].contrast = cam_parameter_init[i][3];
         }
 
-        if (camCfg_EEP[i].hvFlip > HVFLIP_MAX) {
-            camCfg_EEP[i].hvFlip = camParameterInit[i][4];
+        if (cam_cfg_eep[i].hvFlip > HVFLIP_MAX) {
+            cam_cfg_eep[i].hvFlip = cam_parameter_init[i][4];
         }
 
-        if (camCfg_EEP[i].nightMode > NIGHTMODE_MAX) {
-            camCfg_EEP[i].nightMode = camParameterInit[i][5];
+        if (cam_cfg_eep[i].nightMode > NIGHTMODE_MAX) {
+            cam_cfg_eep[i].nightMode = cam_parameter_init[i][5];
         }
 
-        if (camCfg_EEP[i].wbMode > WBMODE_MAX) {
-            camCfg_EEP[i].wbMode = camParameterInit[i][6];
+        if (cam_cfg_eep[i].wbMode > WBMODE_MAX) {
+            cam_cfg_eep[i].wbMode = cam_parameter_init[i][6];
 
             for (j = 0; j < WBMODE_MAX; j++) {
-                camCfg_EEP[i].wbRed[j] = camParameterInit[i][7 + j];
-                camCfg_EEP[i].wbBlue[j] = camParameterInit[i][11 + j];
+                cam_cfg_eep[i].wbRed[j] = cam_parameter_init[i][7 + j];
+                cam_cfg_eep[i].wbBlue[j] = cam_parameter_init[i][11 + j];
             }
         }
 
-        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_BRIGHTNESS, camCfg_EEP[i].brightness);
-        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_SHARPNESS, camCfg_EEP[i].sharpness);
-        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_SATURATION, camCfg_EEP[i].saturation);
-        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_CONTRAST, camCfg_EEP[i].contrast);
-        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_HVFLIP, camCfg_EEP[i].hvFlip);
-        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_NIGHTMODE, camCfg_EEP[i].nightMode);
-        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_WBMODE, camCfg_EEP[i].wbMode);
+        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_BRIGHTNESS, cam_cfg_eep[i].brightness);
+        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_SHARPNESS, cam_cfg_eep[i].sharpness);
+        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_SATURATION, cam_cfg_eep[i].saturation);
+        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_CONTRAST, cam_cfg_eep[i].contrast);
+        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_HVFLIP, cam_cfg_eep[i].hvFlip);
+        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_NIGHTMODE, cam_cfg_eep[i].nightMode);
+        camera_write_eep_parameter((i << 4) + EEP_ADDR_CAM_WBMODE, cam_cfg_eep[i].wbMode);
         for (j = 0; j < WBMODE_MAX; j++) {
-            camera_write_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBRED, camCfg_EEP[i].wbRed[j]);
-            camera_write_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBBLUE, camCfg_EEP[i].wbBlue[j]);
+            camera_write_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBRED, cam_cfg_eep[i].wbRed[j]);
+            camera_write_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBBLUE, cam_cfg_eep[i].wbBlue[j]);
         }
     }
 }
 
-void GetCamCfg_EEP(void) {
+void camera_get_eep_config() {
     uint8_t i, j;
 
-    if (cameraID == 0)
+    if (camera_id == 0)
         return;
 
-    if (cameraID == RUNCAM_MICRO_V1 || cameraID == RUNCAM_MICRO_V2) {
-        camProfile_EEP = camera_read_eep_parameter(EEP_ADDR_CAM_PROFILE);
+    if (camera_id == RUNCAM_MICRO_V1 || camera_id == RUNCAM_MICRO_V2) {
+        cam_profile_eep = camera_read_eep_parameter(EEP_ADDR_CAM_PROFILE);
         for (i = 0; i < RUNCAM_PROFILE_M_TYPE; i++) {
-            camCfg_EEP[i].brightness = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_BRIGHTNESS);
-            camCfg_EEP[i].sharpness = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_SHARPNESS);
-            camCfg_EEP[i].saturation = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_SATURATION);
-            camCfg_EEP[i].contrast = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_CONTRAST);
-            camCfg_EEP[i].hvFlip = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_HVFLIP);
-            camCfg_EEP[i].nightMode = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_NIGHTMODE);
-            camCfg_EEP[i].wbMode = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_WBMODE);
+            cam_cfg_eep[i].brightness = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_BRIGHTNESS);
+            cam_cfg_eep[i].sharpness = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_SHARPNESS);
+            cam_cfg_eep[i].saturation = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_SATURATION);
+            cam_cfg_eep[i].contrast = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_CONTRAST);
+            cam_cfg_eep[i].hvFlip = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_HVFLIP);
+            cam_cfg_eep[i].nightMode = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_NIGHTMODE);
+            cam_cfg_eep[i].wbMode = camera_read_eep_parameter((i << 4) + EEP_ADDR_CAM_WBMODE);
             for (j = 0; j < WBMODE_MAX; j++) {
-                camCfg_EEP[i].wbRed[j] = camera_read_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBRED);
-                camCfg_EEP[i].wbBlue[j] = camera_read_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBBLUE);
+                cam_cfg_eep[i].wbRed[j] = camera_read_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBRED);
+                cam_cfg_eep[i].wbBlue[j] = camera_read_eep_parameter((i << 4) + j + EEP_ADDR_CAM_WBBLUE);
             }
         }
     }
@@ -473,236 +473,236 @@ void GetCamCfg_EEP(void) {
     camera_check_and_save_parameters();
 }
 
-void GetCamCfg(uint8_t USE_EEP_PROFILE) {
+void camera_get_config(uint8_t USE_EEP_PROFILE) {
     uint8_t i;
 
-    if (cameraID == 0)
+    if (camera_id == 0)
         return;
 
-    if (cameraID == RUNCAM_MICRO_V1) {
+    if (camera_id == RUNCAM_MICRO_V1) {
         if (USE_EEP_PROFILE)
-            camProfile = camProfile_EEP & 0x0f;
-        if (camProfile == 0) // Micro V1 default setting
+            cam_profile = cam_profile_eep & 0x0f;
+        if (cam_profile == 0) // Micro V1 default setting
         {
-            camCfg.brightness = camParameterInit[0][0];
-            camCfg.sharpness = camParameterInit[0][1];
-            camCfg.saturation = camParameterInit[0][2];
-            camCfg.contrast = camParameterInit[0][3];
-            camCfg.hvFlip = camParameterInit[0][4];
-            camCfg.nightMode = camParameterInit[0][5];
-            camCfg.wbMode = camParameterInit[0][6];
+            cam_cfg.brightness = cam_parameter_init[0][0];
+            cam_cfg.sharpness = cam_parameter_init[0][1];
+            cam_cfg.saturation = cam_parameter_init[0][2];
+            cam_cfg.contrast = cam_parameter_init[0][3];
+            cam_cfg.hvFlip = cam_parameter_init[0][4];
+            cam_cfg.nightMode = cam_parameter_init[0][5];
+            cam_cfg.wbMode = cam_parameter_init[0][6];
             for (i = 0; i < WBMODE_MAX; i++) {
-                camCfg.wbRed[i] = camParameterInit[0][7 + i];
-                camCfg.wbBlue[i] = camParameterInit[0][11 + i];
+                cam_cfg.wbRed[i] = cam_parameter_init[0][7 + i];
+                cam_cfg.wbBlue[i] = cam_parameter_init[0][11 + i];
             }
         } else // Micro V1 manual setting
         {
-            camCfg.brightness = camCfg_EEP[0].brightness;
-            camCfg.sharpness = camCfg_EEP[0].sharpness;
-            camCfg.saturation = camCfg_EEP[0].saturation;
-            camCfg.contrast = camCfg_EEP[0].contrast;
-            camCfg.hvFlip = camCfg_EEP[0].hvFlip;
-            camCfg.nightMode = camCfg_EEP[0].nightMode;
-            camCfg.wbMode = camCfg_EEP[0].wbMode;
+            cam_cfg.brightness = cam_cfg_eep[0].brightness;
+            cam_cfg.sharpness = cam_cfg_eep[0].sharpness;
+            cam_cfg.saturation = cam_cfg_eep[0].saturation;
+            cam_cfg.contrast = cam_cfg_eep[0].contrast;
+            cam_cfg.hvFlip = cam_cfg_eep[0].hvFlip;
+            cam_cfg.nightMode = cam_cfg_eep[0].nightMode;
+            cam_cfg.wbMode = cam_cfg_eep[0].wbMode;
             for (i = 0; i < WBMODE_MAX; i++) {
-                camCfg.wbRed[i] = camCfg_EEP[0].wbRed[i];
-                camCfg.wbBlue[i] = camCfg_EEP[0].wbBlue[i];
+                cam_cfg.wbRed[i] = cam_cfg_eep[0].wbRed[i];
+                cam_cfg.wbBlue[i] = cam_cfg_eep[0].wbBlue[i];
             }
         }
-    } else if (cameraID == RUNCAM_MICRO_V2) {
+    } else if (camera_id == RUNCAM_MICRO_V2) {
         if (USE_EEP_PROFILE)
-            camProfile = camProfile_EEP >> 4;
-        if (camProfile <= Profile_NanoLite_Auto) {
-            camCfg.brightness = camParameterInit[1 + camProfile][0];
-            camCfg.sharpness = camParameterInit[1 + camProfile][1];
-            camCfg.saturation = camParameterInit[1 + camProfile][2];
-            camCfg.contrast = camParameterInit[1 + camProfile][3];
-            camCfg.hvFlip = camParameterInit[1 + camProfile][4];
-            camCfg.nightMode = camParameterInit[1 + camProfile][5];
-            camCfg.wbMode = camParameterInit[1 + camProfile][6];
+            cam_profile = cam_profile_eep >> 4;
+        if (cam_profile <= Profile_NanoLite_Auto) {
+            cam_cfg.brightness = cam_parameter_init[1 + cam_profile][0];
+            cam_cfg.sharpness = cam_parameter_init[1 + cam_profile][1];
+            cam_cfg.saturation = cam_parameter_init[1 + cam_profile][2];
+            cam_cfg.contrast = cam_parameter_init[1 + cam_profile][3];
+            cam_cfg.hvFlip = cam_parameter_init[1 + cam_profile][4];
+            cam_cfg.nightMode = cam_parameter_init[1 + cam_profile][5];
+            cam_cfg.wbMode = cam_parameter_init[1 + cam_profile][6];
             for (i = 0; i < WBMODE_MAX; i++) {
-                camCfg.wbRed[i] = camParameterInit[1 + camProfile][7 + i];
-                camCfg.wbBlue[i] = camParameterInit[1 + camProfile][11 + i];
+                cam_cfg.wbRed[i] = cam_parameter_init[1 + cam_profile][7 + i];
+                cam_cfg.wbBlue[i] = cam_parameter_init[1 + cam_profile][11 + i];
             }
-        } else if (camProfile <= Profile_NanoLite_Manual) {
-            camCfg.brightness = camCfg_EEP[camProfile - 2].brightness;
-            camCfg.sharpness = camCfg_EEP[camProfile - 2].sharpness;
-            camCfg.saturation = camCfg_EEP[camProfile - 2].saturation;
-            camCfg.contrast = camCfg_EEP[camProfile - 2].contrast;
-            camCfg.hvFlip = camCfg_EEP[camProfile - 2].hvFlip;
-            camCfg.nightMode = camCfg_EEP[camProfile - 2].nightMode;
-            camCfg.wbMode = camCfg_EEP[camProfile - 2].wbMode;
+        } else if (cam_profile <= Profile_NanoLite_Manual) {
+            cam_cfg.brightness = cam_cfg_eep[cam_profile - 2].brightness;
+            cam_cfg.sharpness = cam_cfg_eep[cam_profile - 2].sharpness;
+            cam_cfg.saturation = cam_cfg_eep[cam_profile - 2].saturation;
+            cam_cfg.contrast = cam_cfg_eep[cam_profile - 2].contrast;
+            cam_cfg.hvFlip = cam_cfg_eep[cam_profile - 2].hvFlip;
+            cam_cfg.nightMode = cam_cfg_eep[cam_profile - 2].nightMode;
+            cam_cfg.wbMode = cam_cfg_eep[cam_profile - 2].wbMode;
             for (i = 0; i < WBMODE_MAX; i++) {
-                camCfg.wbRed[i] = camCfg_EEP[camProfile - 2].wbRed[i];
-                camCfg.wbBlue[i] = camCfg_EEP[camProfile - 2].wbBlue[i];
+                cam_cfg.wbRed[i] = cam_cfg_eep[cam_profile - 2].wbRed[i];
+                cam_cfg.wbBlue[i] = cam_cfg_eep[cam_profile - 2].wbBlue[i];
             }
         }
     }
 
 #ifdef _DEBUG_CAMERA
-    debugf("\r\n    profile:    %x", (uint16_t)camProfile);
-    debugf("\r\n    brightness: %x", (uint16_t)camCfg.brightness);
-    debugf("\r\n    sharpness:  %x", (uint16_t)camCfg.sharpness);
-    debugf("\r\n    saturation: %x", (uint16_t)camCfg.saturation);
-    debugf("\r\n    contrast:   %x", (uint16_t)camCfg.contrast);
-    debugf("\r\n    hvFlip:     %x", (uint16_t)camCfg.hvFlip);
-    debugf("\r\n    nightMode:  %x", (uint16_t)camCfg.nightMode);
-    debugf("\r\n    wbMode:     %x", (uint16_t)camCfg.wbMode);
+    debugf("\r\n    profile:    %x", (uint16_t)cam_profile);
+    debugf("\r\n    brightness: %x", (uint16_t)cam_cfg.brightness);
+    debugf("\r\n    sharpness:  %x", (uint16_t)cam_cfg.sharpness);
+    debugf("\r\n    saturation: %x", (uint16_t)cam_cfg.saturation);
+    debugf("\r\n    contrast:   %x", (uint16_t)cam_cfg.contrast);
+    debugf("\r\n    hvFlip:     %x", (uint16_t)cam_cfg.hvFlip);
+    debugf("\r\n    nightMode:  %x", (uint16_t)cam_cfg.nightMode);
+    debugf("\r\n    wbMode:     %x", (uint16_t)cam_cfg.wbMode);
 #endif
 }
 
-void GetCamCfg_Menu(uint8_t INIT_PROFILE) {
+void camera_get_config_menu(uint8_t INIT_PROFILE) {
     uint8_t i;
 
-    if (cameraID == 0)
+    if (camera_id == 0)
         return;
 
     if (INIT_PROFILE)
-        camProfile_Menu = camProfile;
+        cam_profile_menu = cam_profile;
 
-    camCfg_Menu.brightness = camCfg.brightness;
-    camCfg_Menu.sharpness = camCfg.sharpness;
-    camCfg_Menu.saturation = camCfg.saturation;
-    camCfg_Menu.contrast = camCfg.contrast;
-    camCfg_Menu.hvFlip = camCfg.hvFlip;
-    camCfg_Menu.nightMode = camCfg.nightMode;
-    camCfg_Menu.wbMode = camCfg.wbMode;
+    cam_cfg_menu.brightness = cam_cfg.brightness;
+    cam_cfg_menu.sharpness = cam_cfg.sharpness;
+    cam_cfg_menu.saturation = cam_cfg.saturation;
+    cam_cfg_menu.contrast = cam_cfg.contrast;
+    cam_cfg_menu.hvFlip = cam_cfg.hvFlip;
+    cam_cfg_menu.nightMode = cam_cfg.nightMode;
+    cam_cfg_menu.wbMode = cam_cfg.wbMode;
     for (i = 0; i < WBMODE_MAX; i++) {
-        camCfg_Menu.wbRed[i] = camCfg.wbRed[i];
-        camCfg_Menu.wbBlue[i] = camCfg.wbBlue[i];
+        cam_cfg_menu.wbRed[i] = cam_cfg.wbRed[i];
+        cam_cfg_menu.wbBlue[i] = cam_cfg.wbBlue[i];
     }
 }
 
-void SaveCamCfg_Menu(void) {
+void camera_save_config_menu(void) {
     uint8_t i;
 
-    if (cameraID == 0)
+    if (camera_id == 0)
         return;
 
-    camProfile = camProfile_Menu;
-    camCfg.brightness = camCfg_Menu.brightness;
-    camCfg.sharpness = camCfg_Menu.sharpness;
-    camCfg.saturation = camCfg_Menu.saturation;
-    camCfg.contrast = camCfg_Menu.contrast;
-    camCfg.hvFlip = camCfg_Menu.hvFlip;
-    camCfg.nightMode = camCfg_Menu.nightMode;
-    camCfg.wbMode = camCfg_Menu.wbMode;
+    cam_profile = cam_profile_menu;
+    cam_cfg.brightness = cam_cfg_menu.brightness;
+    cam_cfg.sharpness = cam_cfg_menu.sharpness;
+    cam_cfg.saturation = cam_cfg_menu.saturation;
+    cam_cfg.contrast = cam_cfg_menu.contrast;
+    cam_cfg.hvFlip = cam_cfg_menu.hvFlip;
+    cam_cfg.nightMode = cam_cfg_menu.nightMode;
+    cam_cfg.wbMode = cam_cfg_menu.wbMode;
     for (i = 0; i < WBMODE_MAX; i++) {
-        camCfg.wbRed[i] = camCfg_Menu.wbRed[i];
-        camCfg.wbBlue[i] = camCfg_Menu.wbBlue[i];
+        cam_cfg.wbRed[i] = cam_cfg_menu.wbRed[i];
+        cam_cfg.wbBlue[i] = cam_cfg_menu.wbBlue[i];
     }
 
-    if (cameraID == RUNCAM_MICRO_V1) {
-        camProfile_EEP &= 0xf0;
-        camProfile_EEP |= (camProfile & 0x0f);
-        I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_CAM_PROFILE, camProfile_EEP);
+    if (camera_id == RUNCAM_MICRO_V1) {
+        cam_profile_eep &= 0xf0;
+        cam_profile_eep |= (cam_profile & 0x0f);
+        I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_CAM_PROFILE, cam_profile_eep);
 
-        if (camProfile == 1) {
-            camCfg_EEP[0].brightness = camCfg.brightness;
-            camCfg_EEP[0].sharpness = camCfg.sharpness;
-            camCfg_EEP[0].saturation = camCfg.saturation;
-            camCfg_EEP[0].contrast = camCfg.contrast;
-            camCfg_EEP[0].hvFlip = camCfg.hvFlip;
-            camCfg_EEP[0].nightMode = camCfg.nightMode;
-            camCfg_EEP[0].wbMode = camCfg.wbMode;
+        if (cam_profile == 1) {
+            cam_cfg_eep[0].brightness = cam_cfg.brightness;
+            cam_cfg_eep[0].sharpness = cam_cfg.sharpness;
+            cam_cfg_eep[0].saturation = cam_cfg.saturation;
+            cam_cfg_eep[0].contrast = cam_cfg.contrast;
+            cam_cfg_eep[0].hvFlip = cam_cfg.hvFlip;
+            cam_cfg_eep[0].nightMode = cam_cfg.nightMode;
+            cam_cfg_eep[0].wbMode = cam_cfg.wbMode;
             for (i = 0; i < WBMODE_MAX; i++) {
-                camCfg_EEP[0].wbRed[i] = camCfg.wbRed[i];
-                camCfg_EEP[0].wbBlue[i] = camCfg.wbBlue[i];
+                cam_cfg_eep[0].wbRed[i] = cam_cfg.wbRed[i];
+                cam_cfg_eep[0].wbBlue[i] = cam_cfg.wbBlue[i];
             }
             camera_check_and_save_parameters();
         }
-    } else if (cameraID == RUNCAM_MICRO_V2) {
-        camProfile_EEP &= 0x0f;
-        camProfile_EEP |= (camProfile << 4);
-        I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_CAM_PROFILE, camProfile_EEP);
+    } else if (camera_id == RUNCAM_MICRO_V2) {
+        cam_profile_eep &= 0x0f;
+        cam_profile_eep |= (cam_profile << 4);
+        I2C_Write8_Wait(10, ADDR_EEPROM, EEP_ADDR_CAM_PROFILE, cam_profile_eep);
 
-        if (camProfile > 2) {
-            camCfg_EEP[camProfile - 2].brightness = camCfg.brightness;
-            camCfg_EEP[camProfile - 2].sharpness = camCfg.sharpness;
-            camCfg_EEP[camProfile - 2].saturation = camCfg.saturation;
-            camCfg_EEP[camProfile - 2].contrast = camCfg.contrast;
-            camCfg_EEP[camProfile - 2].hvFlip = camCfg.hvFlip;
-            camCfg_EEP[camProfile - 2].nightMode = camCfg.nightMode;
-            camCfg_EEP[camProfile - 2].wbMode = camCfg.wbMode;
+        if (cam_profile > 2) {
+            cam_cfg_eep[cam_profile - 2].brightness = cam_cfg.brightness;
+            cam_cfg_eep[cam_profile - 2].sharpness = cam_cfg.sharpness;
+            cam_cfg_eep[cam_profile - 2].saturation = cam_cfg.saturation;
+            cam_cfg_eep[cam_profile - 2].contrast = cam_cfg.contrast;
+            cam_cfg_eep[cam_profile - 2].hvFlip = cam_cfg.hvFlip;
+            cam_cfg_eep[cam_profile - 2].nightMode = cam_cfg.nightMode;
+            cam_cfg_eep[cam_profile - 2].wbMode = cam_cfg.wbMode;
             for (i = 0; i < WBMODE_MAX; i++) {
-                camCfg_EEP[camProfile - 2].wbRed[i] = camCfg.wbRed[i];
-                camCfg_EEP[camProfile - 2].wbBlue[i] = camCfg.wbBlue[i];
+                cam_cfg_eep[cam_profile - 2].wbRed[i] = cam_cfg.wbRed[i];
+                cam_cfg_eep[cam_profile - 2].wbBlue[i] = cam_cfg.wbBlue[i];
             }
             camera_check_and_save_parameters();
         }
     }
 }
 
-void SetCamCfg(cameraConfig_t *cfg, uint8_t INIT) {
+void camera_set_config(cameraConfig_t *cfg, uint8_t INIT) {
     uint8_t i, j;
 
     if (cfg == 0)
         return;
-    if (cameraID == 0)
+    if (camera_id == 0)
         return;
     if (INIT) {
-        Runcam_SetBrightness(cfg->brightness);
-        Runcam_SetSharpness(cfg->sharpness);
-        Runcam_SetSaturation(cfg->saturation);
-        Runcam_SetContrast(cfg->contrast);
-        Runcam_SetHVFlip(cfg->hvFlip);
-        Runcam_SetNightMode(cfg->nightMode);
-        Runcam_SetWB(cfg->wbRed, cfg->wbBlue, cfg->wbMode);
+        runcam_set_brightness(cfg->brightness);
+        runcam_set_sharpness(cfg->sharpness);
+        runcam_set_saturation(cfg->saturation);
+        runcam_set_contrast(cfg->contrast);
+        runcam_set_hv_flip(cfg->hvFlip);
+        runcam_set_night_mode(cfg->nightMode);
+        runcam_set_wb(cfg->wbRed, cfg->wbBlue, cfg->wbMode);
     } else {
-        if (camCfg_Cur.brightness != cfg->brightness)
-            Runcam_SetBrightness(cfg->brightness);
+        if (cam_cfg_cur.brightness != cfg->brightness)
+            runcam_set_brightness(cfg->brightness);
 
-        if (camCfg_Cur.sharpness != cfg->sharpness)
-            Runcam_SetSharpness(cfg->sharpness);
+        if (cam_cfg_cur.sharpness != cfg->sharpness)
+            runcam_set_sharpness(cfg->sharpness);
 
-        if (camCfg_Cur.saturation != cfg->saturation)
-            Runcam_SetSaturation(cfg->saturation);
+        if (cam_cfg_cur.saturation != cfg->saturation)
+            runcam_set_saturation(cfg->saturation);
 
-        if (camCfg_Cur.contrast != cfg->contrast)
-            Runcam_SetContrast(cfg->contrast);
+        if (cam_cfg_cur.contrast != cfg->contrast)
+            runcam_set_contrast(cfg->contrast);
 
-        if (camCfg_Cur.hvFlip != cfg->hvFlip)
-            Runcam_SetHVFlip(cfg->hvFlip);
+        if (cam_cfg_cur.hvFlip != cfg->hvFlip)
+            runcam_set_hv_flip(cfg->hvFlip);
 
-        if (camCfg_Cur.nightMode != cfg->nightMode)
-            Runcam_SetNightMode(cfg->nightMode);
+        if (cam_cfg_cur.nightMode != cfg->nightMode)
+            runcam_set_night_mode(cfg->nightMode);
 
         j = 0;
-        if (camCfg_Cur.wbMode != cfg->wbMode)
+        if (cam_cfg_cur.wbMode != cfg->wbMode)
             j = 1;
         else {
             for (i = 0; i < WBMODE_MAX; i++) {
-                if (camCfg_Cur.wbRed[i] != cfg->wbRed[i])
+                if (cam_cfg_cur.wbRed[i] != cfg->wbRed[i])
                     j |= 1;
-                if (camCfg_Cur.wbBlue[i] != cfg->wbBlue[i])
+                if (cam_cfg_cur.wbBlue[i] != cfg->wbBlue[i])
                     j |= 1;
             }
         }
         if (j == 1)
-            Runcam_SetWB(cfg->wbRed, cfg->wbBlue, cfg->wbMode);
+            runcam_set_wb(cfg->wbRed, cfg->wbBlue, cfg->wbMode);
     }
 
     debugf("\r\nSet camera parameter done!");
 }
 
-void CameraInit() {
-    CAM_MODE = CamDetect();
-    Cam_Button_INIT();
+void camera_init() {
+    camera_mode = camera_detect();
+    camera_button_init();
 
-    GetCamCfg_EEP();
-    GetCamCfg(1);
-    SetCamCfg(&camCfg, 1);
+    camera_get_eep_config();
+    camera_get_config(1);
+    camera_set_config(&cam_cfg, 1);
 }
 
-void Cam_Button_ENTER() { WriteReg(0, 0x14, 0x32); }
-void Cam_Button_RIGHT() { WriteReg(0, 0x14, 0x58); }
-void Cam_Button_DOWN() { WriteReg(0, 0x14, 0x64); }
-void Cam_Button_LEFT() { WriteReg(0, 0x14, 0x3F); }
-void Cam_Button_UP() { WriteReg(0, 0x14, 0x4B); }
-void Cam_Button_MID() { WriteReg(0, 0x14, 0x00); }
+void camera_button_enter() { WriteReg(0, 0x14, 0x32); }
+void camera_button_right() { WriteReg(0, 0x14, 0x58); }
+void camera_button_down() { WriteReg(0, 0x14, 0x64); }
+void camera_button_left() { WriteReg(0, 0x14, 0x3F); }
+void camera_button_up() { WriteReg(0, 0x14, 0x4B); }
+void camera_button_mid() { WriteReg(0, 0x14, 0x00); }
 
 #ifdef USE_MSP
-uint8_t camStatusUpdate(uint8_t op) {
+uint8_t camera_status_update(uint8_t op) {
     uint8_t ret = 0;
     uint8_t i;
     static uint8_t step = 1;
@@ -713,25 +713,25 @@ uint8_t camStatusUpdate(uint8_t op) {
     if (op >= BTN_INVALID)
         return ret;
 
-    if (cameraID == 0) {
+    if (camera_id == 0) {
         switch (op) {
         case BTN_UP:
-            Cam_Button_UP();
+            camera_button_up();
             break;
         case BTN_DOWN:
-            Cam_Button_DOWN();
+            camera_button_down();
             break;
         case BTN_LEFT:
-            Cam_Button_LEFT();
+            camera_button_left();
             break;
         case BTN_RIGHT:
-            Cam_Button_RIGHT();
+            camera_button_right();
             break;
         case BTN_ENTER:
-            Cam_Button_ENTER();
+            camera_button_enter();
             break;
         case BTN_MID:
-            Cam_Button_MID();
+            camera_button_mid();
             break;
         default:
             break;
@@ -740,12 +740,12 @@ uint8_t camStatusUpdate(uint8_t op) {
         return ret;
     }
 
-    switch (camMenuStatus) {
+    switch (cam_menu_status) {
     case CAM_STATUS_IDLE:
         if (op == BTN_MID) {
-            GetCamCfg_Menu(1);
+            camera_get_config_menu(1);
             cnt = 0;
-            camMenuStatus = CAM_STATUS_PROFILE;
+            cam_menu_status = CAM_STATUS_PROFILE;
         }
         break;
 
@@ -754,39 +754,39 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_SAVE_EXIT;
+            cam_menu_status = CAM_STATUS_SAVE_EXIT;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_BRIGHTNESS;
+            cam_menu_status = CAM_STATUS_BRIGHTNESS;
         else if (op == BTN_LEFT) {
-            camProfile_Menu--;
-            if (camProfile_Menu == 0xff)
-                camProfile_Menu = 0;
+            cam_profile_menu--;
+            if (cam_profile_menu == 0xff)
+                cam_profile_menu = 0;
             else {
-                camProfile = camProfile_Menu;
-                GetCamCfg(0);
-                GetCamCfg_Menu(0);
-                SetCamCfg(&camCfg_Menu, 0);
+                cam_profile = cam_profile_menu;
+                camera_get_config(0);
+                camera_get_config_menu(0);
+                camera_set_config(&cam_cfg_menu, 0);
             }
         } else if (op == BTN_RIGHT) {
-            camProfile_Menu++;
-            if (cameraID == RUNCAM_MICRO_V1) {
-                if (camProfile_Menu > PROFILE_MAX_V1)
-                    camProfile_Menu = PROFILE_MAX_V1;
+            cam_profile_menu++;
+            if (camera_id == RUNCAM_MICRO_V1) {
+                if (cam_profile_menu > PROFILE_MAX_V1)
+                    cam_profile_menu = PROFILE_MAX_V1;
                 else {
-                    camProfile = camProfile_Menu;
-                    GetCamCfg(0);
-                    GetCamCfg_Menu(0);
-                    SetCamCfg(&camCfg_Menu, 0);
+                    cam_profile = cam_profile_menu;
+                    camera_get_config(0);
+                    camera_get_config_menu(0);
+                    camera_set_config(&cam_cfg_menu, 0);
                 }
-            } else // if(cameraID == RUNCAM_MICRO_V2)
+            } else // if(camera_id == RUNCAM_MICRO_V2)
             {
-                if (camProfile_Menu > PROFILE_MAX_V2)
-                    camProfile_Menu = PROFILE_MAX_V2;
+                if (cam_profile_menu > PROFILE_MAX_V2)
+                    cam_profile_menu = PROFILE_MAX_V2;
                 else {
-                    camProfile = camProfile_Menu;
-                    GetCamCfg(0);
-                    GetCamCfg_Menu(0);
-                    SetCamCfg(&camCfg_Menu, 0);
+                    cam_profile = cam_profile_menu;
+                    camera_get_config(0);
+                    camera_get_config_menu(0);
+                    camera_set_config(&cam_cfg_menu, 0);
                 }
             }
         }
@@ -794,12 +794,12 @@ uint8_t camStatusUpdate(uint8_t op) {
 
     case CAM_STATUS_BRIGHTNESS:
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_PROFILE;
+            cam_menu_status = CAM_STATUS_PROFILE;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_SHARPNESS;
-        else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+            cam_menu_status = CAM_STATUS_SHARPNESS;
+        else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT) {
             if (last_op == BTN_MID) {
@@ -814,11 +814,12 @@ uint8_t camStatusUpdate(uint8_t op) {
             if (!step)
                 step = 1;
 
-            camCfg_Menu.brightness += step;
-            if (camCfg_Menu.brightness > BRIGHTNESS_MAX)
-                camCfg_Menu.brightness = BRIGHTNESS_MAX;
+            if ((cam_cfg_menu.brightness + step) > BRIGHTNESS_MAX)
+                cam_cfg_menu.brightness = BRIGHTNESS_MAX;
+            else
+                cam_cfg_menu.brightness += step;
 
-            Runcam_SetBrightness(camCfg_Menu.brightness);
+            runcam_set_brightness(cam_cfg_menu.brightness);
         } else if (op == BTN_LEFT) {
             if (last_op == BTN_MID) {
                 cnt = 0;
@@ -832,11 +833,12 @@ uint8_t camStatusUpdate(uint8_t op) {
             if (!step)
                 step = 1;
 
-            camCfg_Menu.brightness -= step;
-            if (camCfg_Menu.brightness < BRIGHTNESS_MIN)
-                camCfg_Menu.brightness = BRIGHTNESS_MIN;
+            if (cam_cfg_menu.brightness - step < BRIGHTNESS_MIN)
+                cam_cfg_menu.brightness = BRIGHTNESS_MIN;
+            else
+                cam_cfg_menu.brightness -= step;
 
-            Runcam_SetBrightness(camCfg_Menu.brightness);
+            runcam_set_brightness(cam_cfg_menu.brightness);
         }
         break;
 
@@ -845,23 +847,23 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_BRIGHTNESS;
+            cam_menu_status = CAM_STATUS_BRIGHTNESS;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_CONTRAST;
-        else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+            cam_menu_status = CAM_STATUS_CONTRAST;
+        else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT) {
-            camCfg_Menu.sharpness++;
-            if (camCfg_Menu.sharpness > SHARPNESS_MAX)
-                camCfg_Menu.sharpness = SHARPNESS_MAX;
-            Runcam_SetSharpness(camCfg_Menu.sharpness);
+            cam_cfg_menu.sharpness++;
+            if (cam_cfg_menu.sharpness > SHARPNESS_MAX)
+                cam_cfg_menu.sharpness = SHARPNESS_MAX;
+            runcam_set_sharpness(cam_cfg_menu.sharpness);
         } else if (op == BTN_LEFT) {
-            camCfg_Menu.sharpness--;
-            if (camCfg_Menu.sharpness > SHARPNESS_MAX) // 0xff
-                camCfg_Menu.sharpness = SHARPNESS_MIN;
-            Runcam_SetSharpness(camCfg_Menu.sharpness);
+            cam_cfg_menu.sharpness--;
+            if (cam_cfg_menu.sharpness > SHARPNESS_MAX) // 0xff
+                cam_cfg_menu.sharpness = SHARPNESS_MIN;
+            runcam_set_sharpness(cam_cfg_menu.sharpness);
         }
         break;
 
@@ -870,23 +872,23 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_SHARPNESS;
+            cam_menu_status = CAM_STATUS_SHARPNESS;
         if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_SATURATION;
-        else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+            cam_menu_status = CAM_STATUS_SATURATION;
+        else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT) {
-            camCfg_Menu.contrast++;
-            if (camCfg_Menu.contrast > CONTRAST_MAX)
-                camCfg_Menu.contrast = CONTRAST_MAX;
-            Runcam_SetContrast(camCfg_Menu.contrast);
+            cam_cfg_menu.contrast++;
+            if (cam_cfg_menu.contrast > CONTRAST_MAX)
+                cam_cfg_menu.contrast = CONTRAST_MAX;
+            runcam_set_contrast(cam_cfg_menu.contrast);
         } else if (op == BTN_LEFT) {
-            camCfg_Menu.contrast--;
-            if (camCfg_Menu.contrast > CONTRAST_MAX) // 0xff
-                camCfg_Menu.contrast = CONTRAST_MIN;
-            Runcam_SetContrast(camCfg_Menu.contrast);
+            cam_cfg_menu.contrast--;
+            if (cam_cfg_menu.contrast > CONTRAST_MAX) // 0xff
+                cam_cfg_menu.contrast = CONTRAST_MIN;
+            runcam_set_contrast(cam_cfg_menu.contrast);
         }
         break;
 
@@ -895,23 +897,23 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_CONTRAST;
+            cam_menu_status = CAM_STATUS_CONTRAST;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_WBMODE;
-        else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+            cam_menu_status = CAM_STATUS_WBMODE;
+        else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT) {
-            camCfg_Menu.saturation++;
-            if (camCfg_Menu.saturation > SATURATION_MAX)
-                camCfg_Menu.saturation = SATURATION_MAX;
-            Runcam_SetSaturation(camCfg_Menu.saturation);
+            cam_cfg_menu.saturation++;
+            if (cam_cfg_menu.saturation > SATURATION_MAX)
+                cam_cfg_menu.saturation = SATURATION_MAX;
+            runcam_set_saturation(cam_cfg_menu.saturation);
         } else if (op == BTN_LEFT) {
-            camCfg_Menu.saturation--;
-            if (camCfg_Menu.saturation > SATURATION_MAX) // 0xff
-                camCfg_Menu.saturation = SATURATION_MIN;
-            Runcam_SetSaturation(camCfg_Menu.saturation);
+            cam_cfg_menu.saturation--;
+            if (cam_cfg_menu.saturation > SATURATION_MAX) // 0xff
+                cam_cfg_menu.saturation = SATURATION_MIN;
+            runcam_set_saturation(cam_cfg_menu.saturation);
         }
         break;
 
@@ -920,39 +922,39 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_SATURATION;
+            cam_menu_status = CAM_STATUS_SATURATION;
         else if (op == BTN_DOWN) {
-            if (camCfg_Menu.wbMode)
-                camMenuStatus = CAM_STATUS_WBRED;
-            else if (cameraID == RUNCAM_MICRO_V2)
-                camMenuStatus = CAM_STATUS_HVFLIP;
+            if (cam_cfg_menu.wbMode)
+                cam_menu_status = CAM_STATUS_WBRED;
+            else if (camera_id == RUNCAM_MICRO_V2)
+                cam_menu_status = CAM_STATUS_HVFLIP;
             else
-                camMenuStatus = CAM_STATUS_RESET;
-        } else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+                cam_menu_status = CAM_STATUS_RESET;
+        } else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT) {
-            camCfg_Menu.wbMode++;
-            if (camCfg_Menu.wbMode > WBMODE_MAX)
-                camCfg_Menu.wbMode = WBMODE_MAX;
-            Runcam_SetWB(camCfg_Menu.wbRed, camCfg_Menu.wbBlue, camCfg_Menu.wbMode);
+            cam_cfg_menu.wbMode++;
+            if (cam_cfg_menu.wbMode > WBMODE_MAX)
+                cam_cfg_menu.wbMode = WBMODE_MAX;
+            runcam_set_wb(cam_cfg_menu.wbRed, cam_cfg_menu.wbBlue, cam_cfg_menu.wbMode);
         } else if (op == BTN_LEFT) {
-            camCfg_Menu.wbMode--;
-            if (camCfg_Menu.wbMode > WBMODE_MAX)
-                camCfg_Menu.wbMode = WBMODE_MIN;
-            Runcam_SetWB(camCfg_Menu.wbRed, camCfg_Menu.wbBlue, camCfg_Menu.wbMode);
+            cam_cfg_menu.wbMode--;
+            if (cam_cfg_menu.wbMode > WBMODE_MAX)
+                cam_cfg_menu.wbMode = WBMODE_MIN;
+            runcam_set_wb(cam_cfg_menu.wbRed, cam_cfg_menu.wbBlue, cam_cfg_menu.wbMode);
         }
         break;
 
     case CAM_STATUS_WBRED:
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_WBMODE;
+            cam_menu_status = CAM_STATUS_WBMODE;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_WBBLUE;
-        else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+            cam_menu_status = CAM_STATUS_WBBLUE;
+        else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT) {
             if (last_op == BTN_MID) {
@@ -966,9 +968,9 @@ uint8_t camStatusUpdate(uint8_t op) {
             step = cnt >> 3;
             if (!step)
                 step = 1;
-            camCfg_Menu.wbRed[camCfg_Menu.wbMode - 1] += step;
+            cam_cfg_menu.wbRed[cam_cfg_menu.wbMode - 1] += step;
 
-            Runcam_SetWB(camCfg_Menu.wbRed, camCfg_Menu.wbBlue, camCfg_Menu.wbMode);
+            runcam_set_wb(cam_cfg_menu.wbRed, cam_cfg_menu.wbBlue, cam_cfg_menu.wbMode);
         } else if (op == BTN_LEFT) {
             if (last_op == BTN_MID) {
                 cnt = 0;
@@ -981,23 +983,23 @@ uint8_t camStatusUpdate(uint8_t op) {
             step = cnt >> 3;
             if (!step)
                 step = 1;
-            camCfg_Menu.wbRed[camCfg_Menu.wbMode - 1] -= step;
+            cam_cfg_menu.wbRed[cam_cfg_menu.wbMode - 1] -= step;
 
-            Runcam_SetWB(camCfg_Menu.wbRed, camCfg_Menu.wbBlue, camCfg_Menu.wbMode);
+            runcam_set_wb(cam_cfg_menu.wbRed, cam_cfg_menu.wbBlue, cam_cfg_menu.wbMode);
         }
         break;
 
     case CAM_STATUS_WBBLUE:
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_WBRED;
+            cam_menu_status = CAM_STATUS_WBRED;
         else if (op == BTN_DOWN) {
-            if (cameraID == RUNCAM_MICRO_V2)
-                camMenuStatus = CAM_STATUS_HVFLIP;
+            if (camera_id == RUNCAM_MICRO_V2)
+                cam_menu_status = CAM_STATUS_HVFLIP;
             else
-                camMenuStatus = CAM_STATUS_RESET;
-        } else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+                cam_menu_status = CAM_STATUS_RESET;
+        } else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT) {
             if (last_op == BTN_MID) {
@@ -1011,9 +1013,9 @@ uint8_t camStatusUpdate(uint8_t op) {
             step = cnt >> 3;
             if (!step)
                 step = 1;
-            camCfg_Menu.wbBlue[camCfg_Menu.wbMode - 1] += step;
+            cam_cfg_menu.wbBlue[cam_cfg_menu.wbMode - 1] += step;
 
-            Runcam_SetWB(camCfg_Menu.wbRed, camCfg_Menu.wbBlue, camCfg_Menu.wbMode);
+            runcam_set_wb(cam_cfg_menu.wbRed, cam_cfg_menu.wbBlue, cam_cfg_menu.wbMode);
         } else if (op == BTN_LEFT) {
             if (last_op == BTN_MID) {
                 cnt = 0;
@@ -1026,9 +1028,9 @@ uint8_t camStatusUpdate(uint8_t op) {
             step = cnt >> 3;
             if (!step)
                 step = 1;
-            camCfg_Menu.wbBlue[camCfg_Menu.wbMode - 1] -= step;
+            cam_cfg_menu.wbBlue[cam_cfg_menu.wbMode - 1] -= step;
 
-            Runcam_SetWB(camCfg_Menu.wbRed, camCfg_Menu.wbBlue, camCfg_Menu.wbMode);
+            runcam_set_wb(cam_cfg_menu.wbRed, cam_cfg_menu.wbBlue, cam_cfg_menu.wbMode);
         }
         break;
 
@@ -1037,18 +1039,18 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP) {
-            if (camCfg_Menu.wbMode)
-                camMenuStatus = CAM_STATUS_WBBLUE;
+            if (cam_cfg_menu.wbMode)
+                cam_menu_status = CAM_STATUS_WBBLUE;
             else
-                camMenuStatus = CAM_STATUS_WBMODE;
+                cam_menu_status = CAM_STATUS_WBMODE;
         } else if (op == BTN_DOWN) {
-            if (cameraID == RUNCAM_MICRO_V2)
-                camMenuStatus = CAM_STATUS_NIGHTMODE;
+            if (camera_id == RUNCAM_MICRO_V2)
+                cam_menu_status = CAM_STATUS_NIGHTMODE;
             else
-                camMenuStatus = CAM_STATUS_RESET;
+                cam_menu_status = CAM_STATUS_RESET;
         } else if (op == BTN_RIGHT || op == BTN_LEFT) {
-            camCfg_Menu.hvFlip = 1 - camCfg_Menu.hvFlip;
-            Runcam_SetHVFlip(camCfg_Menu.hvFlip);
+            cam_cfg_menu.hvFlip = 1 - cam_cfg_menu.hvFlip;
+            runcam_set_hv_flip(cam_cfg_menu.hvFlip);
         }
         break;
 
@@ -1057,24 +1059,24 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP) {
-            if (cameraID == RUNCAM_MICRO_V2)
-                camMenuStatus = CAM_STATUS_HVFLIP;
-            else if (camCfg_Menu.wbMode)
-                camMenuStatus = CAM_STATUS_WBBLUE;
+            if (camera_id == RUNCAM_MICRO_V2)
+                cam_menu_status = CAM_STATUS_HVFLIP;
+            else if (cam_cfg_menu.wbMode)
+                cam_menu_status = CAM_STATUS_WBBLUE;
             else
-                camMenuStatus = CAM_STATUS_WBMODE;
+                cam_menu_status = CAM_STATUS_WBMODE;
         } else if (op == BTN_DOWN) {
-            if (cameraID == RUNCAM_MICRO_V2)
-                camMenuStatus = CAM_STATUS_VDO_RATIO;
+            if (camera_id == RUNCAM_MICRO_V2)
+                cam_menu_status = CAM_STATUS_VDO_RATIO;
             else
-                camMenuStatus = CAM_STATUS_RESET;
-        } else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+                cam_menu_status = CAM_STATUS_RESET;
+        } else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
         else if (op == BTN_RIGHT || op == BTN_LEFT) {
-            camCfg_Menu.nightMode = 1 - camCfg_Menu.nightMode;
-            Runcam_SetNightMode(camCfg_Menu.nightMode);
+            cam_cfg_menu.nightMode = 1 - cam_cfg_menu.nightMode;
+            runcam_set_night_mode(cam_cfg_menu.nightMode);
         }
         break;
 
@@ -1083,17 +1085,17 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP) {
-            if (cameraID == RUNCAM_MICRO_V2)
-                camMenuStatus = CAM_STATUS_NIGHTMODE;
-            else if (camCfg_Menu.wbMode)
-                camMenuStatus = CAM_STATUS_WBBLUE;
+            if (camera_id == RUNCAM_MICRO_V2)
+                cam_menu_status = CAM_STATUS_NIGHTMODE;
+            else if (cam_cfg_menu.wbMode)
+                cam_menu_status = CAM_STATUS_WBBLUE;
             else
-                camMenuStatus = CAM_STATUS_WBMODE;
+                cam_menu_status = CAM_STATUS_WBMODE;
         } else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_RESET;
+            cam_menu_status = CAM_STATUS_RESET;
         else if (op == BTN_RIGHT) {
-            camMenuSetVdoRatioInit();
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_4_3;
+            camera_menu_set_vdo_ratio_init();
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_4_3;
         }
         break;
 
@@ -1102,14 +1104,14 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_RETURN;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_RETURN;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_16_9_0;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_16_9_0;
         else if (op == BTN_RIGHT) {
-            Runcam_SetVdoRatio(0);
+            runcam_set_vdo_ratio(0);
             memset(osd_buf, 0x20, sizeof(osd_buf));
             strcpy(osd_buf[1] + offset + 2, " NEED TO REPOWER VTX");
-            camMenuStatus = CAM_STATUS_REPOWER;
+            cam_menu_status = CAM_STATUS_REPOWER;
         }
         break;
 
@@ -1118,14 +1120,14 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_4_3;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_4_3;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_16_9_1;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_16_9_1;
         else if (op == BTN_RIGHT) {
-            Runcam_SetVdoRatio(1);
+            runcam_set_vdo_ratio(1);
             memset(osd_buf, 0x20, sizeof(osd_buf));
             strcpy(osd_buf[1] + offset + 2, " NEED TO REPOWER VTX");
-            camMenuStatus = CAM_STATUS_REPOWER;
+            cam_menu_status = CAM_STATUS_REPOWER;
         }
         break;
 
@@ -1134,14 +1136,14 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_16_9_0;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_16_9_0;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_RETURN;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_RETURN;
         else if (op == BTN_RIGHT) {
-            Runcam_SetVdoRatio(2);
+            runcam_set_vdo_ratio(2);
             memset(osd_buf, 0x20, sizeof(osd_buf));
             strcpy(osd_buf[1] + offset + 2, " NEED TO REPOWER VTX");
-            camMenuStatus = CAM_STATUS_REPOWER;
+            cam_menu_status = CAM_STATUS_REPOWER;
         }
         break;
 
@@ -1150,12 +1152,12 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_16_9_1;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_16_9_1;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_SET_VDO_RATIO_4_3;
+            cam_menu_status = CAM_STATUS_SET_VDO_RATIO_4_3;
         else if (op == BTN_RIGHT) {
-            camMenuInit();
-            camMenuStatus = CAM_STATUS_VDO_RATIO;
+            camera_menu_init();
+            cam_menu_status = CAM_STATUS_VDO_RATIO;
         }
         break;
 
@@ -1164,76 +1166,76 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP) {
-            if (cameraID == RUNCAM_MICRO_V2)
-                camMenuStatus = CAM_STATUS_VDO_RATIO;
-            else if (camCfg_Menu.wbMode)
-                camMenuStatus = CAM_STATUS_WBBLUE;
+            if (camera_id == RUNCAM_MICRO_V2)
+                cam_menu_status = CAM_STATUS_VDO_RATIO;
+            else if (cam_cfg_menu.wbMode)
+                cam_menu_status = CAM_STATUS_WBBLUE;
             else
-                camMenuStatus = CAM_STATUS_WBMODE;
+                cam_menu_status = CAM_STATUS_WBMODE;
         } else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_EXIT;
+            cam_menu_status = CAM_STATUS_EXIT;
 #if (0)
-        else if (cameraID == RUNCAM_MICRO_V1 && camProfile_Menu == 0)
+        else if (camera_id == RUNCAM_MICRO_V1 && cam_profile_menu == 0)
             break;
-        else if (cameraID == RUNCAM_MICRO_V2 && camProfile_Menu <= 2)
+        else if (camera_id == RUNCAM_MICRO_V2 && cam_profile_menu <= 2)
             break;
 #endif
         else if (op == BTN_RIGHT) {
-            if (cameraID == RUNCAM_MICRO_V1) {
-                camCfg_Menu.brightness = camParameterInit[0][0];
-                camCfg_Menu.sharpness = camParameterInit[0][1];
-                camCfg_Menu.saturation = camParameterInit[0][2];
-                camCfg_Menu.contrast = camParameterInit[0][3];
-                camCfg_Menu.hvFlip = camParameterInit[0][4];
-                camCfg_Menu.nightMode = camParameterInit[0][5];
-                camCfg_Menu.wbMode = camParameterInit[0][6];
+            if (camera_id == RUNCAM_MICRO_V1) {
+                cam_cfg_menu.brightness = cam_parameter_init[0][0];
+                cam_cfg_menu.sharpness = cam_parameter_init[0][1];
+                cam_cfg_menu.saturation = cam_parameter_init[0][2];
+                cam_cfg_menu.contrast = cam_parameter_init[0][3];
+                cam_cfg_menu.hvFlip = cam_parameter_init[0][4];
+                cam_cfg_menu.nightMode = cam_parameter_init[0][5];
+                cam_cfg_menu.wbMode = cam_parameter_init[0][6];
                 for (i = 0; i < WBMODE_MAX; i++) {
-                    camCfg_Menu.wbRed[i] = camParameterInit[0][7 + i];
-                    camCfg_Menu.wbBlue[i] = camParameterInit[0][11 + i];
+                    cam_cfg_menu.wbRed[i] = cam_parameter_init[0][7 + i];
+                    cam_cfg_menu.wbBlue[i] = cam_parameter_init[0][11 + i];
                 }
-            } else if (cameraID == RUNCAM_MICRO_V2) {
-                if (camProfile_Menu == 0 || camProfile_Menu == 3) // micro V2
+            } else if (camera_id == RUNCAM_MICRO_V2) {
+                if (cam_profile_menu == 0 || cam_profile_menu == 3) // micro V2
                 {
-                    camCfg_Menu.brightness = camParameterInit[1][0];
-                    camCfg_Menu.sharpness = camParameterInit[1][1];
-                    camCfg_Menu.saturation = camParameterInit[1][2];
-                    camCfg_Menu.contrast = camParameterInit[1][3];
-                    camCfg_Menu.hvFlip = camParameterInit[1][4];
-                    camCfg_Menu.nightMode = camParameterInit[1][5];
-                    camCfg_Menu.wbMode = camParameterInit[1][6];
+                    cam_cfg_menu.brightness = cam_parameter_init[1][0];
+                    cam_cfg_menu.sharpness = cam_parameter_init[1][1];
+                    cam_cfg_menu.saturation = cam_parameter_init[1][2];
+                    cam_cfg_menu.contrast = cam_parameter_init[1][3];
+                    cam_cfg_menu.hvFlip = cam_parameter_init[1][4];
+                    cam_cfg_menu.nightMode = cam_parameter_init[1][5];
+                    cam_cfg_menu.wbMode = cam_parameter_init[1][6];
                     for (i = 0; i < WBMODE_MAX; i++) {
-                        camCfg_Menu.wbRed[i] = camParameterInit[1][7 + i];
-                        camCfg_Menu.wbBlue[i] = camParameterInit[1][11 + i];
+                        cam_cfg_menu.wbRed[i] = cam_parameter_init[1][7 + i];
+                        cam_cfg_menu.wbBlue[i] = cam_parameter_init[1][11 + i];
                     }
-                } else if (camProfile_Menu == 1 || camProfile_Menu == 4) // nano v2
+                } else if (cam_profile_menu == 1 || cam_profile_menu == 4) // nano v2
                 {
-                    camCfg_Menu.brightness = camParameterInit[2][0];
-                    camCfg_Menu.sharpness = camParameterInit[2][1];
-                    camCfg_Menu.saturation = camParameterInit[2][2];
-                    camCfg_Menu.contrast = camParameterInit[2][3];
-                    camCfg_Menu.hvFlip = camParameterInit[2][4];
-                    camCfg_Menu.nightMode = camParameterInit[2][5];
-                    camCfg_Menu.wbMode = camParameterInit[2][6];
+                    cam_cfg_menu.brightness = cam_parameter_init[2][0];
+                    cam_cfg_menu.sharpness = cam_parameter_init[2][1];
+                    cam_cfg_menu.saturation = cam_parameter_init[2][2];
+                    cam_cfg_menu.contrast = cam_parameter_init[2][3];
+                    cam_cfg_menu.hvFlip = cam_parameter_init[2][4];
+                    cam_cfg_menu.nightMode = cam_parameter_init[2][5];
+                    cam_cfg_menu.wbMode = cam_parameter_init[2][6];
                     for (i = 0; i < WBMODE_MAX; i++) {
-                        camCfg_Menu.wbRed[i] = camParameterInit[2][7 + i];
-                        camCfg_Menu.wbBlue[i] = camParameterInit[2][11 + i];
+                        cam_cfg_menu.wbRed[i] = cam_parameter_init[2][7 + i];
+                        cam_cfg_menu.wbBlue[i] = cam_parameter_init[2][11 + i];
                     }
-                } else if (camProfile_Menu == 2 || camProfile_Menu == 5) // nano lite
+                } else if (cam_profile_menu == 2 || cam_profile_menu == 5) // nano lite
                 {
-                    camCfg_Menu.brightness = camParameterInit[3][0];
-                    camCfg_Menu.sharpness = camParameterInit[3][1];
-                    camCfg_Menu.saturation = camParameterInit[3][2];
-                    camCfg_Menu.contrast = camParameterInit[3][3];
-                    camCfg_Menu.hvFlip = camParameterInit[3][4];
-                    camCfg_Menu.nightMode = camParameterInit[3][5];
-                    camCfg_Menu.wbMode = camParameterInit[3][6];
+                    cam_cfg_menu.brightness = cam_parameter_init[3][0];
+                    cam_cfg_menu.sharpness = cam_parameter_init[3][1];
+                    cam_cfg_menu.saturation = cam_parameter_init[3][2];
+                    cam_cfg_menu.contrast = cam_parameter_init[3][3];
+                    cam_cfg_menu.hvFlip = cam_parameter_init[3][4];
+                    cam_cfg_menu.nightMode = cam_parameter_init[3][5];
+                    cam_cfg_menu.wbMode = cam_parameter_init[3][6];
                     for (i = 0; i < WBMODE_MAX; i++) {
-                        camCfg_Menu.wbRed[i] = camParameterInit[3][7 + i];
-                        camCfg_Menu.wbBlue[i] = camParameterInit[3][11 + i];
+                        cam_cfg_menu.wbRed[i] = cam_parameter_init[3][7 + i];
+                        cam_cfg_menu.wbBlue[i] = cam_parameter_init[3][11 + i];
                     }
                 }
             }
-            SetCamCfg(&camCfg_Menu, 0);
+            camera_set_config(&cam_cfg_menu, 0);
         }
         break;
 
@@ -1242,14 +1244,14 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_RESET;
+            cam_menu_status = CAM_STATUS_RESET;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_SAVE_EXIT;
+            cam_menu_status = CAM_STATUS_SAVE_EXIT;
         else if (op == BTN_RIGHT) {
-            camMenuStatus = CAM_STATUS_IDLE;
+            cam_menu_status = CAM_STATUS_IDLE;
             msp_tx_cnt = 0;
             ret = 1;
-            SetCamCfg(&camCfg, 0);
+            camera_set_config(&cam_cfg, 0);
         }
         break;
 
@@ -1258,14 +1260,14 @@ uint8_t camStatusUpdate(uint8_t op) {
             break;
 
         if (op == BTN_UP)
-            camMenuStatus = CAM_STATUS_EXIT;
+            cam_menu_status = CAM_STATUS_EXIT;
         else if (op == BTN_DOWN)
-            camMenuStatus = CAM_STATUS_PROFILE;
+            cam_menu_status = CAM_STATUS_PROFILE;
         else if (op == BTN_RIGHT) {
-            camMenuStatus = CAM_STATUS_IDLE;
+            cam_menu_status = CAM_STATUS_IDLE;
             msp_tx_cnt = 0;
             ret = 1;
-            SaveCamCfg_Menu();
+            camera_save_config_menu();
         }
         break;
 
@@ -1274,23 +1276,23 @@ uint8_t camStatusUpdate(uint8_t op) {
 
     default:
         break;
-    } // switch(camMenuStatus)
+    } // switch(cam_menu_status)
 
     last_op = op;
-    camMenuStringUpdate(camMenuStatus);
+    camera_menu_string_update(cam_menu_status);
 
     return ret;
 }
 #endif
 
-void camMenuDrawBracket(void) {
+void camera_menu_draw_bracket() {
     uint8_t offset = (resolution == HD_5018) ? 8 : 0;
     uint8_t preset = 0;
 
-    if (cameraID == RUNCAM_MICRO_V1)
-        preset = 1 - camProfile_Menu;
-    else if (cameraID == RUNCAM_MICRO_V2) {
-        if (camProfile_Menu <= 2)
+    if (camera_id == RUNCAM_MICRO_V1)
+        preset = 1 - cam_profile_menu;
+    else if (camera_id == RUNCAM_MICRO_V2) {
+        if (cam_profile_menu <= 2)
             preset = 1;
         else
             preset = 0;
@@ -1310,7 +1312,7 @@ void camMenuDrawBracket(void) {
         osd_buf[CAM_STATUS_SATURATION][offset + 29] = '>';
         osd_buf[CAM_STATUS_WBMODE][offset + 19] = '<';
         osd_buf[CAM_STATUS_WBMODE][offset + 29] = '>';
-        if (camCfg_Menu.wbMode == 0) {
+        if (cam_cfg_menu.wbMode == 0) {
             osd_buf[CAM_STATUS_WBRED][offset + 19] = ' ';
             osd_buf[CAM_STATUS_WBRED][offset + 29] = ' ';
             osd_buf[CAM_STATUS_WBBLUE][offset + 19] = ' ';
@@ -1321,7 +1323,7 @@ void camMenuDrawBracket(void) {
             osd_buf[CAM_STATUS_WBBLUE][offset + 19] = '<';
             osd_buf[CAM_STATUS_WBBLUE][offset + 29] = '>';
         }
-        if (cameraID == RUNCAM_MICRO_V2) {
+        if (camera_id == RUNCAM_MICRO_V2) {
             osd_buf[CAM_STATUS_HVFLIP][offset + 19] = '<';
             osd_buf[CAM_STATUS_HVFLIP][offset + 29] = '>';
             osd_buf[CAM_STATUS_NIGHTMODE][offset + 19] = '<';
@@ -1342,7 +1344,7 @@ void camMenuDrawBracket(void) {
         osd_buf[CAM_STATUS_WBRED][offset + 29] = ' ';
         osd_buf[CAM_STATUS_WBBLUE][offset + 19] = ' ';
         osd_buf[CAM_STATUS_WBBLUE][offset + 29] = ' ';
-        if (cameraID == RUNCAM_MICRO_V2) {
+        if (camera_id == RUNCAM_MICRO_V2) {
             osd_buf[CAM_STATUS_HVFLIP][offset + 19] = '<';
             osd_buf[CAM_STATUS_HVFLIP][offset + 29] = '>';
             osd_buf[CAM_STATUS_NIGHTMODE][offset + 19] = ' ';
@@ -1351,14 +1353,14 @@ void camMenuDrawBracket(void) {
     }
 }
 
-void camMenuInit() {
+void camera_menu_init() {
     uint8_t i = 0;
     uint8_t offset = (resolution == HD_5018) ? 8 : 0;
 
     memset(osd_buf, 0x20, sizeof(osd_buf));
     disp_mode = DISPLAY_CMS;
-    if (cameraID == 0)
-        Cam_Button_ENTER();
+    if (camera_id == 0)
+        camera_button_enter();
     else {
         strcpy(osd_buf[i++] + offset + 2, "----CAMERA MENU----");
         strcpy(osd_buf[i++] + offset + 2, ">PROFILE");
@@ -1372,18 +1374,18 @@ void camMenuInit() {
         strcpy(osd_buf[i++] + offset + 2, " HV FLIP");
         strcpy(osd_buf[i++] + offset + 2, " MAX GAIN");
         strcpy(osd_buf[i++] + offset + 2, " ASPECT RATIO");
-        if (cameraID == RUNCAM_MICRO_V1)
+        if (camera_id == RUNCAM_MICRO_V1)
             strcpy(osd_buf[i - 1] + offset + 19, "NOT SUPPORT");
         strcpy(osd_buf[i++] + offset + 2, " RESET");
         strcpy(osd_buf[i++] + offset + 2, " EXIT");
         strcpy(osd_buf[i++] + offset + 2, " SAVE&EXIT");
 
-        camMenuDrawBracket();
-        // camMenuStringUpdate(CAM_STATUS_PROFILE);
+        camera_menu_draw_bracket();
+        // camera_menu_string_update(CAM_STATUS_PROFILE);
     }
 }
 
-void camMenuSetVdoRatioInit() {
+void camera_menu_set_vdo_ratio_init() {
     uint8_t offset = (resolution == HD_5018) ? 8 : 0;
 
     memset(osd_buf, 0x20, sizeof(osd_buf));
@@ -1399,7 +1401,7 @@ const char *cam_names[] = {"   MICRO V2", "    NANO V2", "  NANO LITE", " MICRO 
 const char *low_med_high_strs[] = {"   LOW", "MEDIUM", "  HIGH"};
 const char *off_on_strs[] = {"  OFF", "   ON"};
 
-void camMenuStringUpdate(uint8_t status) {
+void camera_menu_string_update(uint8_t status) {
     uint8_t i;
     uint8_t Str[3];
     uint8_t offset = (resolution == HD_5018) ? 8 : 0;
@@ -1425,17 +1427,17 @@ void camMenuStringUpdate(uint8_t status) {
         return;
 
     // Profile
-    if (cameraID == RUNCAM_MICRO_V1) {
-        if (camProfile_Menu == 0)
+    if (camera_id == RUNCAM_MICRO_V1) {
+        if (cam_profile_menu == 0)
             strcpy(osd_buf[CAM_STATUS_PROFILE] + offset + 18, "   MICRO V1");
         else
             strcpy(osd_buf[CAM_STATUS_PROFILE] + offset + 18, " MICRO V1 M");
     } else {
-        strcpy(osd_buf[CAM_STATUS_PROFILE] + offset + 18, cam_names[camProfile_Menu % 6]);
+        strcpy(osd_buf[CAM_STATUS_PROFILE] + offset + 18, cam_names[cam_profile_menu % 6]);
     }
 
     // Brightness
-    dat = (int8_t)CAM_BRIGHTNESS_INITIAL - (int8_t)camCfg_Menu.brightness;
+    dat = (int8_t)CAM_BRIGHTNESS_INITIAL - (int8_t)cam_cfg_menu.brightness;
     if (dat > 0) {
         osd_buf[CAM_STATUS_BRIGHTNESS][offset + 24] = '-';
     } else if (dat < 0) {
@@ -1450,42 +1452,42 @@ void camMenuStringUpdate(uint8_t status) {
     // sharpness
 
     // TODO: If these values are always guaranteed to be within boundaries, eliminating the % and == operations will net us another 100 bytes or so
-    strcpy(osd_buf[CAM_STATUS_SHARPNESS] + offset + 21, low_med_high_strs[camCfg_Menu.sharpness % 3]);
+    strcpy(osd_buf[CAM_STATUS_SHARPNESS] + offset + 21, low_med_high_strs[cam_cfg_menu.sharpness % 3]);
 
     // saturation
     strcpy(osd_buf[CAM_STATUS_SATURATION] + offset + 21, "LEVEL");
-    osd_buf[CAM_STATUS_SATURATION][offset + 26] = '1' + camCfg_Menu.saturation;
+    osd_buf[CAM_STATUS_SATURATION][offset + 26] = '1' + cam_cfg_menu.saturation;
 
     // contrast
-    strcpy(osd_buf[CAM_STATUS_CONTRAST] + offset + 21, low_med_high_strs[camCfg_Menu.contrast % 3]);
+    strcpy(osd_buf[CAM_STATUS_CONTRAST] + offset + 21, low_med_high_strs[cam_cfg_menu.contrast % 3]);
 
     // hvFlip
-    if (cameraID == RUNCAM_MICRO_V1) {
+    if (camera_id == RUNCAM_MICRO_V1) {
         strcpy(osd_buf[CAM_STATUS_HVFLIP] + offset + 19, "NOT SUPPORT");
-    } else { // if(cameraID == RUNCAM_MICRO_V2)
-        strcpy(osd_buf[CAM_STATUS_HVFLIP] + offset + 21, off_on_strs[(uint8_t)(camCfg_Menu.hvFlip != 0)]);
+    } else { // if(camera_id == RUNCAM_MICRO_V2)
+        strcpy(osd_buf[CAM_STATUS_HVFLIP] + offset + 21, off_on_strs[(uint8_t)(cam_cfg_menu.hvFlip != 0)]);
     }
 
     // nightMode
-    if (cameraID == RUNCAM_MICRO_V1) {
+    if (camera_id == RUNCAM_MICRO_V1) {
         strcpy(osd_buf[CAM_STATUS_NIGHTMODE] + offset + 19, "NOT SUPPORT");
-    } else { // cameraID == RUNCAM_MICRO_V2
-        strcpy(osd_buf[CAM_STATUS_NIGHTMODE] + offset + 21, off_on_strs[(uint8_t)(camCfg_Menu.nightMode != 0)]);
+    } else { // camera_id == RUNCAM_MICRO_V2
+        strcpy(osd_buf[CAM_STATUS_NIGHTMODE] + offset + 21, off_on_strs[(uint8_t)(cam_cfg_menu.nightMode != 0)]);
     }
 
     // wb
-    if (camCfg_Menu.wbMode == 0) {
+    if (cam_cfg_menu.wbMode == 0) {
         strcpy(osd_buf[CAM_STATUS_WBMODE] + offset + 21, "  AUTO ");
         strcpy(osd_buf[CAM_STATUS_WBRED] + offset + 21, "       ");
         strcpy(osd_buf[CAM_STATUS_WBBLUE] + offset + 21, "       ");
     } else {
         strcpy(osd_buf[CAM_STATUS_WBMODE] + offset + 21, "MANUAL ");
-        osd_buf[CAM_STATUS_WBMODE][offset + 27] = '0' + camCfg_Menu.wbMode;
-        uint8ToString(camCfg_Menu.wbRed[camCfg_Menu.wbMode - 1], Str);
+        osd_buf[CAM_STATUS_WBMODE][offset + 27] = '0' + cam_cfg_menu.wbMode;
+        uint8ToString(cam_cfg_menu.wbRed[cam_cfg_menu.wbMode - 1], Str);
         strcpy(osd_buf[CAM_STATUS_WBRED] + offset + 24, Str);
-        uint8ToString(camCfg_Menu.wbBlue[camCfg_Menu.wbMode - 1], Str);
+        uint8ToString(cam_cfg_menu.wbBlue[cam_cfg_menu.wbMode - 1], Str);
         strcpy(osd_buf[CAM_STATUS_WBBLUE] + offset + 24, Str);
     }
 
-    camMenuDrawBracket();
+    camera_menu_draw_bracket();
 }

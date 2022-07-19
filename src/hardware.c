@@ -155,7 +155,7 @@ void Setting_Save() {
     uint8_t rcv = 0;
 
 #if (0)
-    if (cameraID == 0) {
+    if (camera_id == 0) {
         CAM_WriteCFG(0, RF_FREQ, RF_POWER, MODE);
         CAM_WriteCFG(0, RF_FREQ, RF_POWER, MODE);
         CAM_WriteCFG(0, RF_FREQ, RF_POWER, MODE);
@@ -371,7 +371,7 @@ void Init_HW() {
     GetVtxParameter();
     Get_EEP_LifeTime();
     //---------- Camera ---------------
-    CameraInit();
+    camera_init();
     //--------- dm6300 --------------------
     if (last_SA_lock == 0) {
         if (PIT_MODE == PIT_0MW) {
@@ -875,7 +875,7 @@ void Video_Detect() {
         if (heat_protect)
             return;
 
-        if (cameraID) {
+        if (camera_id) {
             LED_BLUE_ON;
             led_status = ON;
             return;
@@ -892,12 +892,12 @@ void Video_Detect() {
         if (sec == 3) {
             sec = 0;
             if (vdet) { // video loss
-                if (CAM_MODE == CAM_720P50) {
+                if (camera_mode == CAM_720P50) {
                     Set_720P60(IS_RX);
-                    CAM_MODE = CAM_720P60;
-                } else if (CAM_MODE == CAM_720P60) {
+                    camera_mode = CAM_720P60;
+                } else if (camera_mode == CAM_720P60) {
                     Set_720P50(IS_RX);
-                    CAM_MODE = CAM_720P50;
+                    camera_mode = CAM_720P50;
                 }
             }
         }

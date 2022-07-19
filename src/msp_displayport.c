@@ -621,13 +621,13 @@ uint8_t get_tx_data_5680() // prepare data to VRX
     tx_buf[3] = 12;
 
     // camType
-    if (CAM_MODE == CAM_720P50)
+    if (camera_mode == CAM_720P50)
         tx_buf[4] = 0x66;
-    else if (CAM_MODE == CAM_720P60)
+    else if (camera_mode == CAM_720P60)
         tx_buf[4] = 0x99;
-    else if (CAM_MODE == CAM_720P60_NEW)
+    else if (camera_mode == CAM_720P60_NEW)
         tx_buf[4] = 0xAA;
-    else if (CAM_MODE == CAM_720P30)
+    else if (camera_mode == CAM_720P30)
         tx_buf[4] = 0xCC;
 
     // fcType
@@ -1300,7 +1300,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
             cms_cnt = 0;
             disp_mode = DISPLAY_CMS;
             clear_screen();
-            camMenuInit();
+            camera_menu_init();
             cms_state = CMS_CAM;
         }
         break;
@@ -1313,7 +1313,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
         else
             cms_cnt = 0;
 
-        if (camStatusUpdate(VirtualBtn) || (cms_cnt == 10)) {
+        if (camera_status_update(VirtualBtn) || (cms_cnt == 10)) {
             disp_mode = DISPLAY_OSD;
             cms_state = CMS_OSD;
             fc_init();
