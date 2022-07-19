@@ -52,7 +52,12 @@ uint8_t SPI_Read_Byte()
     return ret;
 }
 
-void SPI_Write(uint8_t trans, uint16_t addr, uint32_t dat_h, uint32_t dat_l)
+void SPI_Write(uint8_t trans, uint16_t addr, uint32_t dat_l)
+{
+    SPI_Write_All(trans, addr, 0x00000000, dat_l);
+}
+
+void SPI_Write_All(uint8_t trans, uint16_t addr, uint32_t dat_h, uint32_t dat_l)
 {
     uint32_t rh=0,rl=0;
     uint16_t rlh=0,rll=0;
