@@ -94,12 +94,12 @@ typedef enum {
     CAM_STATUS_REPOWER,
 } camStatusType_e;
 
-void CameraInit();
-uint8_t camStatusUpdate(uint8_t op);
-void camMenuInit();
+void camera_init();
+uint8_t camera_status_update(uint8_t op);
+void camera_menu_init();
 
 extern uint8_t cam_4_3;
-extern uint8_t CAM_MODE;
-extern uint8_t cameraID;
+extern uint8_t camera_mode;
+extern uint8_t camera_id;
 
 #endif /* __CAMERA_H_ */

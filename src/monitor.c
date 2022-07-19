@@ -298,10 +298,10 @@ void chg_vtx(void) {
         WriteReg(0, 0x50, 0x00);
         DM6300_SetChannel(RF_FREQ);
         DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
-        debugf("\r\nVTX Cam, channel = %d,power = %d,FPS = %d", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)CAM_MODE);
+        debugf("\r\nVTX Cam, channel = %d,power = %d,FPS = %d", (uint16_t)RF_FREQ, (uint16_t)RF_POWER, (uint16_t)camera_mode);
     } else { // pattern
         Set_720P60(0);
-        CAM_MODE = CAM_720P60;
+        camera_mode = CAM_720P60;
         WriteReg(0, 0x50, 0x01);
 
         RF_POWER = pwr;
