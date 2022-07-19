@@ -96,7 +96,7 @@ uint8_t CamDetect()
 
         fps = (fps == CAM_720P60) ? CAM_720P50 : CAM_720P60;
 
-        loss = 0;
+        loss = 1;
         cycles--;
     }
 
