@@ -4,17 +4,17 @@
 #include "isr.h"
 #include "uart.h"
 
-uint8_t btn1_tflg = 0;
-uint8_t pwr_sflg = 0;    //power autoswitch flag
-uint8_t pwr_tflg = 0;
-uint8_t cfg_tflg = 0;
-uint8_t temp_tflg = 0;
-uint8_t timer_4hz = 0;
-uint8_t timer_8hz = 0;
-uint8_t timer_16hz = 0;
+BIT_TYPE btn1_tflg = 0;
+BIT_TYPE pwr_sflg = 0;    //power autoswitch flag
+BIT_TYPE pwr_tflg = 0;
+BIT_TYPE cfg_tflg = 0;
+BIT_TYPE temp_tflg = 0;
+BIT_TYPE timer_4hz = 0;
+BIT_TYPE timer_8hz = 0;
+BIT_TYPE timer_16hz = 0;
+BIT_TYPE RS0_ERR = 0;
 IDATA_SEG volatile uint16_t timer_ms10x = 0;
 uint16_t seconds = 0;
-uint8_t RS0_ERR = 0;
 
 void CPU_init(void)
 {
@@ -36,10 +36,10 @@ void CPU_init(void)
 
     CKCON = 0x1F;   // [4]   timer1 uses a divide-by-N of the system clock frequency. 0:N=12; 1:N=4
                     // [3]   timer0 uses a divide-by-N of the system clock frequency. 0:N=12; 1:N=4
-    
+
     TH0   = 139;
     TL0   = 0;
-    
+
     TH1   = 0xEC;   // [7:0] in timer mode 0x10:   ----------------->> 148.5MHz: 0x87; 100MHz: 0xAF; 54MHz: 0xD4; 27MHz: 0xEA
                     //	               f(clk)
                     //  BaudRate = --------------  (M=16 or 32, decided by PCON double rate flag)
@@ -55,11 +55,11 @@ void CPU_init(void)
     IE    = 0xD2;   // [7]   enable global interupts  1
                     // [6]   enable uart1  interupt   1
                     // [5]   enable timer2 interupt   0
-                    // [4]   enable uart0  interupt   1 
-                    // [3]   enable timer1 interupt   0 
-                    // [2]   enable INT1   interupt   0 
+                    // [4]   enable uart0  interupt   1
+                    // [3]   enable timer1 interupt   0
+                    // [2]   enable INT1   interupt   0
                     // [1]   enable timer0 interupt   0
                     // [0]   enable INT0   interupt   0
     IP    = 0x10;   // UART0=higher priority, Timer 0 = low
-    
+
 }
