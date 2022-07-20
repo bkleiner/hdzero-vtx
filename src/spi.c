@@ -37,8 +37,8 @@ void SPI_Write_Byte(uint8_t dat)
 uint8_t SPI_Read_Byte()
 {
     int i;
-    uint8_t ret;
-    
+    uint8_t ret = 0;
+
     for(i=7; i>=0; i--){
         SPI_DLY;
         
