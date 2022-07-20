@@ -919,85 +919,80 @@ void parseMspVtx_V2(uint16_t cmd_u16)
     
 }
 
-uint8_t parse_displayport(uint8_t len)
-{
+uint8_t parse_displayport(uint8_t len) {
     uint8_t row = 0, col = 0;
-    uint8_t state_osd = MSP_OSD_SUBCMD;
-    uint8_t ptr = 0;
-    uint8_t ret = 0;
     uint8_t page_extend = 0;
-    
-    while(ptr != 64){
-        switch(state_osd){
-            case MSP_OSD_SUBCMD:
-                if(msp_rx_buf[0] == SUBCMD_HEARTBEAT)
-                    return 0;
-                else if(msp_rx_buf[0] == SUBCMD_RELEASE)
-                    return 0;
-                else if(msp_rx_buf[0] == SUBCMD_CLEAR){
-                    if(disp_mode == DISPLAY_OSD)
-                        clear_screen();
-                    osd_ready = 0;
-                    #ifdef _DEBUG_DISPLAYPORT
-                    _outchar('\r');_outchar('\n');_outchar('C');
-                    #endif
-                    return 0;
-                }else if(msp_rx_buf[0] == SUBCMD_WRITE){
-                    #ifdef _DEBUG_DISPLAYPORT
-                    _outchar('W');
-                    #endif
-                    osd_ready = 0;
-                    state_osd = MSP_OSD_LOC;
-                }else if(msp_rx_buf[0] == SUBCMD_DRAW){
-                    osd_ready = 1;
-                    #ifdef _DEBUG_DISPLAYPORT
-                    _outchar('D'); _outchar(' ');
-                    #endif
-                    if(!(fc_lock & FC_OSD_LOCK)) {
-                        Flicker_LED( 8 );
-                        fc_lock |= FC_OSD_LOCK;
-                    }
-                    return 1;
-                }else if(msp_rx_buf[0] == SUBCMD_CONFIG){
-                    fontType = msp_rx_buf[1];
-                    resolution = msp_rx_buf[2];
-                    
-                    if(resolution != resolution_last)
-                        fc_init();
-                    resolution_last = resolution;
-                    return 0;
-                }else{
-                    return 0;
-                }
-                break;
-            case MSP_OSD_LOC:
-                row = msp_rx_buf[1];
-                col = msp_rx_buf[2];
-                if(resolution == HD_3016)
-                {
-                    row -= 1;
-                    col -= 10;
-                }
-                mark_loc(row,col);
-                state_osd = MSP_OSD_ATTR;
-                break;
-            case MSP_OSD_ATTR:
-                if(len == 0)
-                    return 0;
-                else{
-                    page_extend = msp_rx_buf[3] & 0x01;
-                    state_osd = MSP_OSD_WRITE;
-                }
-                break;
-            case MSP_OSD_WRITE:
-                for(ptr = 0; ptr<len; ptr++){
-                    write_string(msp_rx_buf[4+ptr],row,col+ptr, page_extend);
-                }
-                return 0;
-            default: break;
-        }//switch
-    }//while
-    return ret;
+    uint8_t ptr = 0;
+
+    if (len == 0)
+        return 0;
+
+    switch (msp_rx_buf[0]) {
+    case SUBCMD_CLEAR:
+        osd_ready = 0;
+
+        if (disp_mode == DISPLAY_OSD)
+            clear_screen();
+
+#ifdef _DEBUG_DISPLAYPORT
+        _outchar('\r');
+        _outchar('\n');
+        _outchar('C');
+#endif
+        return 0;
+
+    case SUBCMD_CONFIG:
+        fontType = msp_rx_buf[1];
+        resolution = msp_rx_buf[2];
+
+        if (resolution != resolution_last)
+            fc_init();
+
+        resolution_last = resolution;
+        return 0;
+
+    case SUBCMD_DRAW:
+#ifdef _DEBUG_DISPLAYPORT
+        _outchar('D');
+        _outchar(' ');
+#endif
+        if (!(fc_lock & FC_OSD_LOCK)) {
+            Flicker_LED(8);
+            fc_lock |= FC_OSD_LOCK;
+        }
+
+        osd_ready = 1;
+        return 1;
+
+    case SUBCMD_WRITE:
+        osd_ready = 0;
+
+#ifdef _DEBUG_DISPLAYPORT
+        _outchar('W');
+#endif
+
+        row = msp_rx_buf[1];
+        col = msp_rx_buf[2];
+        page_extend = msp_rx_buf[3] & 0x01;
+
+        if (resolution == HD_3016) {
+            row -= 1;
+            col -= 10;
+        }
+        mark_loc(row, col);
+
+        for (ptr = 0; ptr < len; ptr++) {
+            write_string(msp_rx_buf[4 + ptr], row, col + ptr, page_extend);
+        }
+        break;
+
+    default:
+    case SUBCMD_RELEASE:
+    case SUBCMD_HEARTBEAT:
+        return 0;
+    }
+
+    return 0;
 }
 
 void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throttle)
