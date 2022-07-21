@@ -1,4 +1,5 @@
 #include "msp_displayport.h"
+
 #include "camera.h"
 #include "common.h"
 #include "dm6300.h"
@@ -6,25 +7,13 @@
 #include "hardware.h"
 #include "isr.h"
 #include "lifetime.h"
+#include "osd_display.h"
 #include "print.h"
 #include "smartaudio_protocol.h"
 #include "spi.h"
 #include "uart.h"
 
-uint8_t osd_buf[HD_VMAX][HD_HMAX];
-uint8_t loc_buf[HD_VMAX][7];
-uint8_t page_extend_buf[HD_VMAX][7];
-uint8_t tx_buf[TXBUF_SIZE]; // buffer for sending data to VRX
-uint8_t dptxbuf[256];
-uint8_t dptx_rptr, dptx_wptr;
-
 uint8_t fc_lock = 0;
-uint8_t disp_mode = DISPLAY_OSD; // DISPLAY_OSD | DISPLAY_CMS;
-uint8_t osd_ready = 0;
-
-uint8_t fontType = 0x00;
-uint8_t resolution = SD_3016;
-uint8_t resolution_last = HD_5018;
 
 uint8_t msp_rx_buf[64]; // from FC responding status|variant|rc commands
 uint8_t msp_tx_cnt = 0xff;
@@ -51,70 +40,23 @@ uint8_t lp_mode_cfg_done = 0;
 uint8_t g_IS_ARMED_last = 0;
 
 uint8_t cms_state = CMS_OSD;
-uint8_t lq_cnt = 0;
 
 uint8_t mspVtxLock = 0;
 
+extern uint8_t rf_init_done;
+
 #ifdef USE_MSP
-void msp_task() {
-    uint8_t len;
-    static uint8_t tx_row = 0;
-    static uint8_t t1 = 0;
-    static uint8_t vmax = SD_VMAX;
 
-#ifdef _DEBUG_DISPLAYPORT
-    if (RS0_ERR) {
-        RS0_ERR = 0;
-        _outchar('$'); // RS0 buffer full
-    }
+void msp_cmd_tx();
+void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throttle);
+void vtx_menu_init();
+void update_vtx_menu_param(uint8_t vtx_state);
+void save_vtx_param();
+void set_vtx_param();
+
+#ifdef INIT_VTX_TABLE
+void InitVtxTable();
 #endif
-    DP_tx_task();
-
-    // decide by osd_frame size/rate and dptx rate
-    if (msp_read_one_frame()) {
-        if (resolution == HD_5018) {
-            tx_row = HD_VMAX >> 1;
-            vmax = HD_VMAX;
-        } else {
-            tx_row = SD_VMAX;
-            vmax = SD_VMAX;
-        }
-    }
-
-    if (osd_ready) {
-        // send osd
-        len = get_tx_data_osd(t1);
-#ifdef _DEBUG_DISPLAYPORT
-// debugf("\n\r%x ", (uint16_t)t1);
-#endif
-        insert_tx_buf(len);
-
-        t1++;
-        if (t1 >= vmax)
-            t1 = 0;
-    }
-
-    if (timer_4hz)
-        timer_4hz = 0;
-
-    // send param to FC -- 8HZ
-    // send param to VRX -- 8HZ
-    if (timer_8hz) {
-        timer_8hz = 0;
-        len = get_tx_data_5680();
-        insert_tx_buf(len);
-        if (dispF_cnt < DISPF_TIME)
-            dispF_cnt++;
-
-        if (msp_tx_cnt <= 8)
-            msp_tx_cnt++;
-        else
-            msp_cmd_tx();
-    }
-
-    // set_vtx
-    set_vtx_param();
-}
 
 void msp_parse_vtx_config() {
     uint8_t nxt_ch = 0;
@@ -270,38 +212,6 @@ void msp_parse_vtx_config() {
     debugf("\r\nmsp_parse_vtx_config pwr:%x, pit:%x", (uint16_t)nxt_pwr, (uint16_t)fc_pit_rx);
 }
 
-void clear_screen() {
-    memset(osd_buf, 0x20, sizeof(osd_buf));
-    memset(loc_buf, 0x00, sizeof(loc_buf));
-    memset(page_extend_buf, 0x00, sizeof(page_extend_buf));
-}
-
-void write_string(uint8_t rx, uint8_t row, uint8_t col, uint8_t page_extend) {
-    if (disp_mode == DISPLAY_OSD) {
-        if (resolution == HD_5018) {
-            if (row < HD_VMAX && col < HD_HMAX) {
-                osd_buf[row][col] = rx;
-                if (page_extend)
-                    page_extend_buf[row][col >> 3] |= (1 << (col & 0x07));
-                else
-                    page_extend_buf[row][col >> 3] &= (0xff - (1 << (col & 0x07)));
-            }
-        } else if (resolution == SD_3016 || resolution == HD_3016) {
-            if (row < SD_VMAX && col < SD_HMAX) {
-                osd_buf[row][col] = rx;
-                if (page_extend)
-                    page_extend_buf[row][col >> 3] |= (1 << (col & 0x07));
-                else
-                    page_extend_buf[row][col >> 3] &= (0xff - (1 << (col & 0x07)));
-            }
-        }
-    }
-}
-
-void mark_loc(uint8_t row, uint8_t col) {
-    loc_buf[row][col >> 3] |= (1 << (col & 0x07));
-}
-
 uint8_t msp_parse_displayport(uint8_t len) {
     uint8_t row = 0, col = 0;
     uint8_t page_extend = 0;
@@ -310,28 +220,23 @@ uint8_t msp_parse_displayport(uint8_t len) {
     if (len == 0)
         return 0;
 
+    // do not allow changes to the osd while the internal one is active
+    if (osd_mode != DISPLAY_OSD)
+        return 0;
+
     switch (msp_rx_buf[0]) {
     case SUBCMD_CLEAR:
-        osd_ready = 0;
-
-        if (disp_mode == DISPLAY_OSD)
-            clear_screen();
-
 #ifdef _DEBUG_DISPLAYPORT
         _outchar('\r');
         _outchar('\n');
         _outchar('C');
 #endif
+
+        osd_clear_screen();
         return 0;
 
     case SUBCMD_CONFIG:
-        fontType = msp_rx_buf[1];
-        resolution = msp_rx_buf[2];
-
-        if (resolution != resolution_last)
-            fc_init();
-
-        resolution_last = resolution;
+        osd_set_config(msp_rx_buf[1], msp_rx_buf[2]);
         return 0;
 
     case SUBCMD_DRAW:
@@ -344,11 +249,10 @@ uint8_t msp_parse_displayport(uint8_t len) {
             fc_lock |= FC_OSD_LOCK;
         }
 
-        osd_ready = 1;
+        osd_submit();
         return 1;
 
     case SUBCMD_WRITE:
-        osd_ready = 0;
 
 #ifdef _DEBUG_DISPLAYPORT
         _outchar('W');
@@ -362,11 +266,8 @@ uint8_t msp_parse_displayport(uint8_t len) {
             row -= 1;
             col -= 10;
         }
-        mark_loc(row, col);
 
-        for (ptr = 0; ptr < len; ptr++) {
-            write_string(msp_rx_buf[4 + ptr], row, col + ptr, page_extend);
-        }
+        osd_write_data(row, col, page_extend, msp_rx_buf + 4, len);
         break;
 
     default:
@@ -598,252 +499,6 @@ uint8_t msp_read_one_frame() {
     return ret;
 }
 
-void init_tx_buf() {
-    uint8_t i;
-    for (i = 0; i < TXBUF_SIZE; i++)
-        tx_buf[i] = 0;
-}
-
-void fc_init() {
-    disp_mode = DISPLAY_OSD;
-    dptx_wptr = dptx_rptr = 0;
-
-    osd_ready = 0;
-    clear_screen();
-    init_tx_buf();
-    // vtx_menu_init();
-}
-
-uint8_t get_tx_data_5680() // prepare data to VRX
-{
-    uint8_t temp;
-
-    tx_buf[0] = DP_HEADER0;
-    tx_buf[1] = DP_HEADER1;
-    tx_buf[2] = 0xff;
-    // len
-    tx_buf[3] = 12;
-
-    // camType
-    if (camera_mode == CAM_720P50)
-        tx_buf[4] = 0x66;
-    else if (camera_mode == CAM_720P60)
-        tx_buf[4] = 0x99;
-    else if (camera_mode == CAM_720P60_NEW)
-        tx_buf[4] = 0xAA;
-    else if (camera_mode == CAM_720P30)
-        tx_buf[4] = 0xCC;
-
-    // fcType
-    tx_buf[5] = fc_variant[0];
-    tx_buf[6] = fc_variant[1];
-    tx_buf[7] = fc_variant[2];
-    tx_buf[8] = fc_variant[3];
-
-    // counter for link quality
-    tx_buf[9] = lq_cnt++;
-
-    // VTX temp and overhot
-    temp = pwr_offset >> 1;
-    if (temp > 8)
-        temp = 8;
-    tx_buf[10] = (heat_protect << 7) | temp;
-
-    tx_buf[11] = fontType; // fontType
-
-    tx_buf[12] = VERSION;
-
-#if defined VTX_B
-    tx_buf[13] = VTX_B_ID; // reversed
-#elif defined VTX_M
-    tx_buf[13] = VTX_M_ID;
-#elif defined VTX_S
-    tx_buf[13] = VTX_S_ID;
-#elif defined VTX_R
-    tx_buf[13] = VTX_R_ID;
-#elif defined VTX_WL
-    tx_buf[13] = VTX_WL_ID;
-#elif defined VTX_L
-    tx_buf[13] = VTX_L_ID;
-#endif
-
-    tx_buf[14] = fc_lock & 0x03;
-
-    tx_buf[15] = cam_4_3 ? 0xaa : 0x55;
-
-    tx_buf[16] = 0x40; // crc
-
-    return 17;
-}
-
-uint8_t get_tx_data_osd(uint8_t index) // prepare osd+data to VTX
-{
-    // package struct:
-    /*
-    {
-        uint8_t header0;
-        uint8_t header1;
-        uint8_t row_number;     // include resolution
-        uint8_t length;
-        uint8_t *mask;          // not ' ' flag. len:hd(7) sd(4)
-        uint8_t *loc_flag;      // only for sd. len:4
-        uint8_t *string;
-        uint8_t *page;          // length decide by len(string)
-        uint8_t crc0;
-        uint8_t crc1;
-
-    }
-    */
-    uint8_t mask[7] = {0};
-    uint8_t i, t1;
-    uint8_t ptr;
-    uint8_t hmax;
-    uint8_t len_mask;
-    uint8_t page[7] = {0};
-    uint8_t page_byte = 0;
-    uint8_t num = 0;
-
-    if (resolution == HD_5018) {
-        hmax = HD_HMAX;
-        len_mask = 7;
-        ptr = 11;
-    } else {
-        ptr = 12;
-        len_mask = 4;
-        hmax = SD_HMAX;
-    }
-
-    // string
-    for (i = 0; i < hmax; i++) {
-        t1 = osd_buf[index][i];
-        if (t1 != ' ') {
-            mask[i >> 3] |= (1 << (i & 0x07));
-            tx_buf[ptr] = t1;
-
-            page[num >> 3] |= ((page_extend_buf[index][i >> 3] >> (i & 0x07)) & 0x01) << (num & 0x07);
-            ptr++;
-            num++;
-        }
-    }
-
-    // page
-    page_byte = (num >> 3) + ((num & 0x07) != 0);
-    for (i = 0; i < page_byte; i++) {
-        if (disp_mode == DISPLAY_OSD)
-            tx_buf[ptr++] = page[i];
-        else
-            tx_buf[ptr++] = 0;
-    }
-
-    tx_buf[0] = DP_HEADER0;
-    tx_buf[1] = DP_HEADER1;
-    tx_buf[2] = (resolution << 5) | index;
-    tx_buf[3] = ptr - 4; // len
-
-    // 0x20 flag
-    for (i = 0; i < len_mask; i++) {
-        tx_buf[4 + i] = mask[i];
-    }
-
-    // location_flag
-    if (resolution == SD_3016) {
-        if (disp_mode == DISPLAY_OSD) {
-            tx_buf[8] = loc_buf[index][0];
-            tx_buf[9] = loc_buf[index][1];
-            tx_buf[10] = loc_buf[index][2];
-            tx_buf[11] = loc_buf[index][3];
-        } else {
-            tx_buf[8] = 0x00; // 0x04;
-            tx_buf[9] = 0x00;
-            tx_buf[10] = 0x00; // 0x04;
-            tx_buf[11] = 0x00;
-        }
-    }
-
-    return (uint8_t)(ptr + 1);
-}
-
-void insert_tx_byte(uint8_t c) {
-    dptxbuf[dptx_wptr++] = c;
-#ifdef _DEBUG_DISPLAYPORT
-    if (dptx_wptr == dptx_rptr) // dptxbuf full
-        _outchar('*');
-#endif
-}
-
-#ifdef SDCC
-void DP_SEND_27M(uint8_t c) {
-    // found by trial and error, are on the conservative side
-    // could use refinement down the line
-    uint16_t __ticks = 300;
-    do {
-        __ticks--;
-    } while (__ticks);
-
-    DP_tx(c);
-}
-void DP_SEND_20M(uint8_t c) {
-    // found by trial and error, are on the conservative side
-    // could use refinement down the line
-    uint16_t __ticks = 450;
-    do {
-        __ticks--;
-    } while (__ticks);
-
-    DP_tx(c);
-}
-#else
-#define DP_SEND_27M(c)                  \
-    {                                   \
-        uint8_t _i_;                    \
-        for (_i_ = 0; _i_ < 200; _i_++) \
-            ;                           \
-        DP_tx(c);                       \
-    }
-#define DP_SEND_20M(c)                  \
-    {                                   \
-        uint8_t _i_;                    \
-        for (_i_ = 0; _i_ < 200; _i_++) \
-            ;                           \
-        for (_i_ = 0; _i_ < 100; _i_++) \
-            ;                           \
-        DP_tx(c);                       \
-    }
-#endif
-
-void DP_tx_task() {
-    uint8_t i;
-    for (i = 0; i < 32; i++) {
-        if (dptx_wptr != dptx_rptr) {
-#if (1)
-            if (RF_BW == BW_20M) {
-                DP_SEND_20M(dptxbuf[dptx_rptr++]);
-            } else {
-                DP_SEND_27M(dptxbuf[dptx_rptr++]);
-            }
-#else
-            _outchar(dptxbuf[dptx_rptr++]);
-#endif
-        } else
-            break;
-    }
-}
-
-void insert_tx_buf(uint8_t len) {
-    uint8_t i;
-    uint8_t crc0, crc1;
-
-    crc0 = 0;
-    crc1 = 0;
-    for (i = 0; i < len - 1; i++) {
-        crc0 ^= tx_buf[i];
-        crc1 = crc8tab[crc1 ^ tx_buf[i]];
-        insert_tx_byte(tx_buf[i]);
-    }
-    insert_tx_byte(crc0);
-    insert_tx_byte(crc1);
-}
-
 void msp_send_header(uint8_t dl) {
     if (dl)
         WAIT(20);
@@ -985,7 +640,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
     uint8_t IS_MID_roll = IS_MID(roll);
 
     if (!disarmed && (cms_state != CMS_OSD)) {
-        fc_init();
+        osd_reset();
         cms_state = CMS_OSD;
     }
 
@@ -1246,7 +901,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
                     } else if (VirtualBtn == BTN_RIGHT) {
                         vtx_state = 0;
                         cms_state = CMS_OSD;
-                        fc_init();
+                        osd_reset();
                         msp_tx_cnt = 0;
                     }
                     break;
@@ -1274,20 +929,20 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
                         } else {
                             save_vtx_param();
                         }
-                        fc_init();
+                        osd_reset();
                         msp_tx_cnt = 0;
                     }
                     break;
                 default:
                     cms_state = CMS_OSD;
-                    fc_init();
+                    osd_reset();
                     break;
                 } // switch
             }     // if(last_mid)
             // last_mid = mid;
         } else {
             cms_state = CMS_OSD;
-            fc_init();
+            osd_reset();
         }
         break;
     }
@@ -1300,8 +955,8 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
 
         if (cms_cnt == 5) {
             cms_cnt = 0;
-            disp_mode = DISPLAY_CMS;
-            clear_screen();
+            osd_mode = DISPLAY_CMS;
+            osd_clear_screen();
             camera_menu_init();
             cms_state = CMS_CAM;
         }
@@ -1316,9 +971,9 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
             cms_cnt = 0;
 
         if (camera_status_update(VirtualBtn) || (cms_cnt == 10)) {
-            disp_mode = DISPLAY_OSD;
+            osd_mode = DISPLAY_OSD;
             cms_state = CMS_OSD;
-            fc_init();
+            osd_reset();
             msp_tx_cnt = 0;
         }
 
@@ -1327,7 +982,7 @@ void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throt
 
     default: {
         cms_state = CMS_OSD;
-        fc_init();
+        osd_reset();
         break;
     }
     } // switch
@@ -1340,8 +995,8 @@ void vtx_menu_init() {
     uint8_t hourString[4];
     uint8_t minuteString[2];
 
-    disp_mode = DISPLAY_CMS;
-    clear_screen();
+    osd_mode = DISPLAY_CMS;
+    osd_clear_screen();
 
     strcpy(osd_buf[0] + offset + 2, "----VTX_MENU----");
     strcpy(osd_buf[2] + offset + 2, ">CHANNEL");
@@ -1678,9 +1333,37 @@ void InitVtxTable() {
 }
 #endif
 
+void msp_init() {
+}
+
+void msp_task() {
+#ifdef _DEBUG_DISPLAYPORT
+    if (RS0_ERR) {
+        RS0_ERR = 0;
+        _outchar('$'); // RS0 buffer full
+    }
+#endif
+
+    msp_read_one_frame();
+
+    // send param to FC -- 8HZ
+    if (timer_8hz) {
+        if (dispF_cnt < DISPF_TIME)
+            dispF_cnt++;
+
+        if (msp_tx_cnt <= 8)
+            msp_tx_cnt++;
+        else
+            msp_cmd_tx();
+    }
+
+    // set_vtx
+    set_vtx_param();
+}
+
 #else
 
-void fc_init() {}
+void msp_init() {}
 void msp_task() {}
 void msp_set_vtx_config(uint8_t power, uint8_t save) {}
 
