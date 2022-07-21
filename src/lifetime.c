@@ -91,31 +91,16 @@ void Update_EEP_LifeTime(void)
 
 }
 
-void ParseLifeTime(unsigned char *hourString, unsigned char *minuteString)
-{
-    uint32_t minute;
-    uint32_t hour;
+void ParseLifeTime(unsigned char *hourString, unsigned char *minuteString) {
+    uint32_t temp;
+    uint32_t hour = sysLifeTime / 360;
+    uint32_t minute = (sysLifeTime % 360) / 6;
 
-    hour = sysLifeTime/360;
-    hourString[0] = '0' + (hour%10000)/1000;
-    hourString[1] = '0' + (hour%1000)/100;
-    hourString[2] = '0' + (hour%100)/10;
-    hourString[3] = '0' + (hour%10);
+    SET_ASCII_NON_ZERO(hourString[0], (hour % 10000) / 1000);
+    SET_ASCII_NON_ZERO(hourString[1], (hour % 1000) / 100);
+    SET_ASCII(hourString[2], (hour % 100) / 10);
+    SET_ASCII(hourString[3], (hour % 10));
 
-    if(hourString[0] == '0')
-    {
-        hourString[0] = ' ';
-        if(hourString[1] == '0')
-        {
-            hourString[1] = ' ';
-            if(hourString[2] == '0')
-            {
-                hourString[2] = ' ';
-            }
-        }
-    }
-    
-    minute= (sysLifeTime%360)/6;
-    minuteString[0] = '0' + (minute%60)/10;
-    minuteString[1] = '0' + (minute%10);
+    SET_ASCII(minuteString[0], (minute % 60) / 10);
+    SET_ASCII(minuteString[1], (minute % 10));
 }

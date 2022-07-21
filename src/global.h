@@ -7,6 +7,18 @@
 #define ASSERT(a) 
 #define abs(a) ( ((a)<0)?(-(a)):(a))
 
+#define SET_ASCII(res, val) \
+    temp = (val);           \
+    res = '0' + temp;
+
+#define SET_ASCII_NON_ZERO(res, val) \
+    temp = (val);                    \
+    if (temp == 0) {                 \
+        res = ' ';                   \
+    } else {                         \
+        res = '0' + temp;            \
+    }
+
 uint8_t Asc2Bin(uint8_t *s);
 uint16_t Asc4Bin(uint8_t *s);
 uint32_t Asc8Bin(uint8_t *s);

@@ -96,26 +96,11 @@ void WAIT(uint32_t ms)
 #endif
 
 void uint8ToString(uint8_t dec, uint8_t *Str) {
-    uint8_t val = dec / 100;
-    if (val == 0) {
-        Str[0] = ' ';
-    } else {
-        Str[0] = '0' + val;
-    }
+    uint8_t temp;
 
-    val = (dec - (val * 100)) / 10;
-    if (val == 0) {
-        Str[1] = ' ';
-    } else {
-        Str[1] = '0' + val;
-    }
-
-    val = dec % 10;
-    if (val == 0) {
-        Str[2] = ' ';
-    } else {
-        Str[2] = '0' + val;
-    }
+    SET_ASCII_NON_ZERO(Str[0], dec / 100);
+    SET_ASCII_NON_ZERO(Str[1], (dec - (temp * 100)) / 10);
+    SET_ASCII_NON_ZERO(Str[2], dec % 10);
 }
 
 uint8_t crc8tab[256] = {
