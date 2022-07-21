@@ -105,7 +105,7 @@ void main(void) {
 #endif
 
 #ifdef _DEBUG_MODE
-    Prompt();
+    debug_prompt();
 #endif
 
     // main loop
@@ -120,7 +120,7 @@ void main(void) {
 #ifdef _RF_CALIB
         CalibProc();
 #elif defined _DEBUG_MODE
-        Monitor();
+        debug_monitor();
 #endif
 
         Video_Detect();
