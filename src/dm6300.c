@@ -1,11 +1,11 @@
 #include "dm6300.h"
+
 #include "common.h"
+#include "debug.h"
 #include "global.h"
 #include "hardware.h"
 #include "i2c.h"
 #include "i2c_device.h"
-#include "monitor.h"
-#include "print.h"
 #include "spi.h"
 
 typedef struct {

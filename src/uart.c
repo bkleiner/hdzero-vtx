@@ -1,7 +1,7 @@
 #include "uart.h"
 
 #include "common.h"
-#include "print.h"
+#include "debug.h"
 #include "smartaudio_protocol.h"
 
 XDATA_SEG uint8_t RS_buf[BUF_MAX];

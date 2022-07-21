@@ -1,5 +1,6 @@
 #include "camera.h"
 
+#include "debug.h"
 #include "global.h"
 #include "hardware.h"
 #include "i2c.h"
@@ -7,7 +8,6 @@
 #include "isr.h"
 #include "msp_displayport.h"
 #include "osd_display.h"
-#include "print.h"
 
 uint8_t camera_id = 0;
 uint8_t cam_4_3 = 0;

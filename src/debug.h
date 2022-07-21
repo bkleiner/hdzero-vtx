@@ -6,6 +6,9 @@
 void _debugf(const char *fmt, ...);
 void _verbosef(const char *fmt, ...);
 
+void Monitor();
+#define Prompt() debugf("\r\nDM568X>")
+
 #ifdef _DEBUG_MODE
 #define debugf(args...) _debugf(args)
 #define verbosef(args...) _verbosef(args)

@@ -1,8 +1,8 @@
 #include "spi.h"
 
 #include "common.h"
+#include "debug.h"
 #include "global.h"
-#include "print.h"
 
 #define SET_CS(n) SPI_CS = n
 #define SET_CK(n) SPI_CK = n
