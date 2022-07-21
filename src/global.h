@@ -21,4 +21,6 @@ void WAIT(uint16_t ms);
 void WAIT(uint32_t ms);
 #endif
 
+extern uint8_t crc8tab[256];
+
 #endif /* __GLOBAL_H_ */

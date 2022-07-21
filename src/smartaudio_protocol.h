@@ -43,7 +43,6 @@ uint8_t SA_Process();
 void    SA_Init();
 
 extern uint8_t SA_dbm;
-extern uint8_t crc8tab[256];
 uint8_t pwr_to_dbm(uint8_t pwr);
 #endif // USE_SMARTAUDIO
 
