@@ -61,7 +61,7 @@ void _verbosef(const char *fmt, ...) {
     }
 }
 
-void MonHelp(void) {
+void debug_monitor_help(void) {
     debugf("\r\nUsage: ");
     debugf("\r\n   w   addr  wdat   : Write reg_map register");
     debugf("\r\n   r   addr         : Read  reg_map register");
@@ -83,7 +83,7 @@ void MonHelp(void) {
     debugf("\r\n");
 }
 
-uint8_t MonGetCommand(void) {
+uint8_t debug_monitor_get_cmd(void) {
     uint8_t i, ch;
     uint8_t ret = 0;
 
@@ -112,14 +112,14 @@ uint8_t MonGetCommand(void) {
         argc = 0;
         incnt = 0;
         comment = 0;
-        Prompt();
+        debug_prompt();
         return 0;
 
     //--- end of string
     case '\r':
 
         if (incnt == 0) {
-            Prompt();
+            debug_prompt();
             break;
         }
 
@@ -132,7 +132,7 @@ uint8_t MonGetCommand(void) {
         if (!monstr[i]) {
             incnt = 0;
             comment = 0;
-            Prompt();
+            debug_prompt();
             return 0;
         }
 
@@ -190,7 +190,7 @@ uint8_t MonGetCommand(void) {
     }
 }
 
-void MonEE(uint8_t op, uint8_t d) {
+void debug_monitor_eeprom(uint8_t op, uint8_t d) {
     uint8_t val;
     uint8_t addr;
 
@@ -225,7 +225,7 @@ void MonEE(uint8_t op, uint8_t d) {
     DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
 }
 
-void MonWrite(uint8_t mode) {
+void debug_monitor_write(uint8_t mode) {
     uint16_t addr = 0;
     uint8_t value;
 
@@ -281,7 +281,7 @@ void MonWrite(uint8_t mode) {
     }
 }
 
-void MonRead(uint8_t mode) {
+void debug_monitor_read(uint8_t mode) {
     uint16_t addr;
     uint8_t value;
 
@@ -320,7 +320,7 @@ void MonRead(uint8_t mode) {
     }
 }
 
-void chg_vtx(void) {
+void debug_monitor_change_vtx(void) {
     uint8_t chan, pwr;
     uint8_t t0 = 0, t1 = 1, t2 = 2;
 
@@ -350,24 +350,24 @@ void chg_vtx(void) {
     }
 }
 
-void Monitor(void) {
-    if (!MonGetCommand())
+void debug_monitor(void) {
+    if (!debug_monitor_get_cmd())
         return;
 
     if (!stricmp(argv[0], "w"))
-        MonWrite(0);
+        debug_monitor_write(0);
     else if (!stricmp(argv[0], "r"))
-        MonRead(0);
+        debug_monitor_read(0);
     else if (!stricmp(argv[0], "w2"))
-        MonWrite(1);
+        debug_monitor_write(1);
     else if (!stricmp(argv[0], "r2"))
-        MonRead(1);
+        debug_monitor_read(1);
     else if (!stricmp(argv[0], "ww"))
-        MonWrite(2);
+        debug_monitor_write(2);
     else if (!stricmp(argv[0], "rr"))
-        MonRead(2);
+        debug_monitor_read(2);
     else if (!stricmp(argv[0], "pat"))
-        chg_vtx();
+        debug_monitor_change_vtx();
     else if (!stricmp(argv[0], "c"))
         Init_6300RF(RF_FREQ, RF_POWER);
     else if (!stricmp(argv[0], "rfrst")) {
@@ -411,13 +411,13 @@ void Monitor(void) {
             DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
         }
     } else if (!stricmp(argv[0], "ew"))
-        MonEE(0, Asc2Bin(argv[1]));
+        debug_monitor_eeprom(0, Asc2Bin(argv[1]));
     else if (!stricmp(argv[0], "er"))
-        MonEE(1, 0);
+        debug_monitor_eeprom(1, 0);
     else if (!stricmp(argv[0], "ea"))
-        MonEE(2, 0);
+        debug_monitor_eeprom(2, 0);
     else if (!stricmp(argv[0], "es"))
-        MonEE(3, 0);
+        debug_monitor_eeprom(3, 0);
     else if (!stricmp(argv[0], "dc")) {
         if (argc == 5) {
             I2C_Write8_Wait(10, ADDR_EEPROM, 0x88, Asc2Bin(argv[1]));
@@ -445,10 +445,10 @@ void Monitor(void) {
         else
             debugf("\r\nVerbose off");
     } else if (!stricmp(argv[0], "h"))
-        MonHelp();
+        debug_monitor_help();
     else
         debugf("\r\nInvalid Command...");
 
-    Prompt();
+    debug_prompt();
 }
 #endif

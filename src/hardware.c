@@ -771,7 +771,7 @@ void PwrLMT() {
                         p_init = 1;
 
                         debugf("\r\nPower limit done.");
-                        Prompt();
+                        debug_prompt();
                     }
                 }
             } else {
@@ -837,7 +837,7 @@ void PwrLMT() {
                             p_init = 1;
 
                             debugf("\r\nPower limit done.");
-                            Prompt();
+                            debug_prompt();
                         }
                     }
                 } else {
@@ -1138,7 +1138,7 @@ void CFGTimeout() {
 
                 Init_MAX7315(0xFF);
                 debugf("\r\nCFG Timeout.");
-                Prompt();
+                debug_prompt();
             }
         }
     }
