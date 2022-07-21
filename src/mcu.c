@@ -9,6 +9,7 @@
 #include "lifetime.h"
 #include "monitor.h"
 #include "msp_displayport.h"
+#include "osd_display.h"
 #include "print.h"
 #include "rom.h"
 #include "sfr_ext.h"
@@ -99,7 +100,9 @@ void main(void) {
 #endif
 
     Init_HW(); // init
-    fc_init(); // init displayport
+
+    osd_init();
+    msp_init();
 
 #ifdef USE_SMARTAUDIO
     SA_Init();
@@ -136,7 +139,10 @@ void main(void) {
             LED_Task();
             TempDetect(); // temperature dectect
             PwrLMT();     // RF power ctrl
-            msp_task();   // msp displayport process
+
+            msp_task(); // msp displayport process
+            osd_task();
+
             Update_EEP_LifeTime();
         }
 

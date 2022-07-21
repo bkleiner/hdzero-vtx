@@ -6,6 +6,7 @@
 #include "i2c_device.h"
 #include "isr.h"
 #include "msp_displayport.h"
+#include "osd_display.h"
 #include "print.h"
 
 uint8_t cameraID = 0;
@@ -1211,7 +1212,7 @@ void camMenuInit() {
     uint8_t i = 0;
 
     memset(osd_buf, 0x20, sizeof(osd_buf));
-    disp_mode = DISPLAY_CMS;
+    osd_mode = DISPLAY_CMS;
     if (cameraID == 0)
         Cam_Button_ENTER();
     else {

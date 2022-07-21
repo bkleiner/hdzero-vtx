@@ -106,12 +106,6 @@ typedef enum {
 } displayport_subcmd_e;
 
 typedef enum {
-    SD_3016,
-    HD_5018,
-    HD_3016,
-} resolutionType_e;
-
-typedef enum {
     CMS_OSD,
     CMS_ENTER_0MW,
     CMS_EXIT_0MW,
@@ -122,44 +116,29 @@ typedef enum {
     CMS_CAM
 } cms_state_e;
 
-typedef enum {
-    DISPLAY_OSD,
-    DISPLAY_CMS,
-} disp_mode_e;
-
+void msp_init();
 void msp_task();
 uint8_t msp_read_one_frame();
-void clear_screen();
-void mark_flag(uint8_t row, uint8_t col);
-void init_txbuf();
-void fc_init();
-void mark_loc(uint8_t row, uint8_t col);
-uint8_t prepare_tx_buf();
-uint8_t get_tx_data_5680();
-uint8_t get_tx_data_osd(uint8_t index);
-void insert_tx_buf(uint8_t len);
-void DP_tx_task();
 void msp_cmd_tx();
 void parse_status();
 void parse_rc();
 void parse_variant();
 void parse_vtx_config();
-void parseMspVtx_V2(uint16_t cmd_u16);
 uint8_t parse_displayport(uint8_t len);
+
 void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throttle);
 void vtx_menu_init();
 void update_vtx_menu_param(uint8_t vtx_state);
 void save_vtx_param();
 void msp_set_vtx_config(uint8_t power, uint8_t save);
 void set_vtx_param();
+uint8_t msp_cmp_fc_variant(const char *variant);
+
 #ifdef INIT_VTX_TABLE
 void InitVtxTable();
 #endif
-extern uint8_t osd_buf[HD_VMAX][HD_HMAX];
+
 extern uint8_t osd_menu_offset;
-extern uint8_t disp_mode;
 extern uint8_t msp_tx_cnt;
-extern uint8_t resolution;
-extern uint8_t first_arm;
 extern uint8_t mspVtxLock;
 #endif /* __MSP_DISPLAYPORT_H_ */
