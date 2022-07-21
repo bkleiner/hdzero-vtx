@@ -4,7 +4,7 @@
 #include "global.h"
 #include "hardware.h"
 #include "i2c.h"
-#include "print.h"
+#include "debug.h"
 
 /////////////////////////////////////////////////////////////////
 // MAX7315

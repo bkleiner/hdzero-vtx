@@ -1,5 +1,6 @@
 #include "lifetime.h"
-#include "print.h"
+
+#include "debug.h"
 
 uint32_t sysLifeTime = 0;
 uint32_t sysLifeTime_last = 0;

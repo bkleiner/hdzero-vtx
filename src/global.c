@@ -1,6 +1,6 @@
 #include "global.h"
 #include "common.h"
-#include "print.h"
+#include "debug.h"
 
 #ifdef _DEBUG_MODE
 

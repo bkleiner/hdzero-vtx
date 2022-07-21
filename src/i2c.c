@@ -1,8 +1,8 @@
 #include "i2c.h"
 
 #include "common.h"
+#include "debug.h"
 #include "global.h"
-#include "print.h"
 
 #define SCL_SET(n) SCL = n
 #define SDA_SET(n) SDA = n

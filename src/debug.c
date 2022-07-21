@@ -1,15 +1,14 @@
-#include "monitor.h"
+#include "debug.h"
+
 #include "camera.h"
 #include "common.h"
 #include "dm6300.h"
 #include "global.h"
-#include "hardware.h"
 #include "i2c.h"
-#include "i2c_device.h"
-#include "print.h"
-#include "sfr_ext.h"
 #include "spi.h"
 #include "uart.h"
+
+#include <stdio.h>
 
 #ifdef _DEBUG_MODE
 
@@ -27,6 +26,40 @@ XDATA_SEG uint8_t last_argc = 0;
 XDATA_SEG uint8_t comment = 0;
 BIT_TYPE echo = 1;
 BIT_TYPE verbose = 1;
+
+XDATA_SEG char print_buf[128];
+
+void _debugf(const char *fmt, ...) {
+    int len = 0;
+    int i = 0;
+    va_list ap;
+
+    va_start(ap, fmt);
+    len = vsprintf(print_buf, fmt, ap);
+    va_end(ap);
+
+    for (; i < len; i++) {
+        _outchar(print_buf[i]);
+    }
+}
+
+void _verbosef(const char *fmt, ...) {
+    int len = 0;
+    int i = 0;
+    va_list ap;
+
+    if (!verbose) {
+        return;
+    }
+
+    va_start(ap, fmt);
+    len = vsprintf(print_buf, fmt, ap);
+    va_end(ap);
+
+    for (; i < len; i++) {
+        _outchar(print_buf[i]);
+    }
+}
 
 void MonHelp(void) {
     debugf("\r\nUsage: ");
