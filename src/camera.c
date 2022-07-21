@@ -6,6 +6,7 @@
 #include "i2c_device.h"
 #include "isr.h"
 #include "msp_displayport.h"
+#include "osd_display.h"
 #include "print.h"
 
 uint8_t camera_id = 0;
@@ -1358,7 +1359,7 @@ void camera_menu_init() {
     uint8_t offset = (resolution == HD_5018) ? 8 : 0;
 
     memset(osd_buf, 0x20, sizeof(osd_buf));
-    disp_mode = DISPLAY_CMS;
+    osd_mode = DISPLAY_CMS;
     if (camera_id == 0)
         camera_button_enter();
     else {

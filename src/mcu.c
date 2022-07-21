@@ -9,6 +9,7 @@
 #include "lifetime.h"
 #include "monitor.h"
 #include "msp_displayport.h"
+#include "osd_display.h"
 #include "print.h"
 #include "rom.h"
 #include "sfr_ext.h"
@@ -97,7 +98,9 @@ void main(void) {
     debugf("\r\n");
 
     Init_HW(); // init
-    fc_init(); // init displayport
+
+    osd_init();
+    msp_init();
 
 #ifdef USE_SMARTAUDIO
     SA_Init();
@@ -109,7 +112,6 @@ void main(void) {
 
     // main loop
     while (1) {
-
         timer_task();
 
 #ifdef USE_SMARTAUDIO
@@ -130,7 +132,10 @@ void main(void) {
         if ((last_SA_lock && (seconds > WAIT_SA_CONFIG)) || (last_SA_lock == 0)) {
             TempDetect(); // temperature dectect
             PwrLMT();     // RF power ctrl
-            msp_task();   // msp displayport process
+
+            msp_task(); // msp displayport process
+            osd_task();
+
             Update_EEP_LifeTime();
         }
 #ifdef USE_SMARTAUDIO
@@ -142,11 +147,23 @@ void main(void) {
 void timer_task() {
     static uint16_t cur_ms10x_1sd16 = 0, last_ms10x_1sd16 = 0;
     static uint8_t timer_cnt = 0;
+
+    // reset timers from last loop
+    if (timer_4hz) {
+        timer_4hz = 0;
+    }
+
+    if (timer_8hz) {
+        timer_8hz = 0;
+    }
+
     cur_ms10x_1sd16 = timer_ms10x;
+
     if (((cur_ms10x_1sd16 - last_ms10x_1sd16) >= TIMER0_1SD16) || (cur_ms10x_1sd16 < last_ms10x_1sd16)) {
         last_ms10x_1sd16 = cur_ms10x_1sd16;
         timer_cnt++;
         timer_cnt &= 15;
+
         if (timer_cnt == 15) { // every second, 1Hz
             btn1_tflg = 1;
             pwr_tflg = 1;
@@ -163,6 +180,7 @@ void timer_task() {
 
         if ((timer_cnt & 1) == 1) // every octual second, 8Hz
             timer_8hz = 1;
+
         timer_16hz = 1;
     }
 }
