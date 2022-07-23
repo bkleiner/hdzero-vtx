@@ -7,8 +7,8 @@
 #include "i2c_device.h"
 #include "isr.h"
 #include "msp_displayport.h"
+#include "register.h"
 #include "rom.h"
-#include "sfr_ext.h"
 #include "uart.h"
 
 uint8_t SA_lock = 0;

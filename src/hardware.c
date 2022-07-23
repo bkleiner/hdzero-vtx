@@ -9,7 +9,7 @@
 #include "isr.h"
 #include "lifetime.h"
 #include "msp_displayport.h"
-#include "sfr_ext.h"
+#include "register.h"
 #include "smartaudio_protocol.h"
 #include "spi.h"
 #include "uart.h"
