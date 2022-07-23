@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "sfr_def.h"
-#include "sfr_ext.h"
+#include "register.h"
 #include "toolchain.h"
 
 #define VERSION 0x41

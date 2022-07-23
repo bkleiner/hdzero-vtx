@@ -1,5 +1,5 @@
-#ifndef __PRINT_H_
-#define __PRINT_H_
+#ifndef __DEBUG_H_
+#define __DEBUG_H_
 
 #include <stdarg.h>
 
@@ -26,4 +26,4 @@ static void _nopf(const char *fmt, ...) { fmt = fmt; }
 
 #endif
 
-#endif /* __PRINT_H_ */
+#endif /* __DEBUG_H_ */

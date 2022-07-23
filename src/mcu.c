@@ -10,8 +10,8 @@
 #include "lifetime.h"
 #include "msp_displayport.h"
 #include "osd_display.h"
+#include "register.h"
 #include "rom.h"
-#include "sfr_ext.h"
 #include "smartaudio_protocol.h"
 #include "uart.h"
 
