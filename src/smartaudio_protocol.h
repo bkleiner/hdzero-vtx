@@ -37,7 +37,7 @@ typedef enum {
 
 } SA_status_e;
 
-uint8_t SA_task();
+uint8_t sa_task();
 uint8_t SA_Process();
 void SA_Init();
 

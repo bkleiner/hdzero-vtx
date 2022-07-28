@@ -1,6 +1,7 @@
 #include "lifetime.h"
 
 #include "debug.h"
+#include "mcu.h"
 
 uint32_t sysLifeTime = 0;
 uint32_t sysLifeTime_last = 0;

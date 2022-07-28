@@ -10,8 +10,8 @@
 #include "driver/spi.h"
 #include "driver/uart.h"
 #include "global.h"
-#include "isr.h"
 #include "lifetime.h"
+#include "mcu.h"
 #include "msp_displayport.h"
 #include "smartaudio_protocol.h"
 
