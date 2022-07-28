@@ -2,18 +2,18 @@
 #include "common.h"
 #include "debug.h"
 #include "dm6300.h"
+#include "driver/i2c.h"
+#include "driver/i2c_device.h"
+#include "driver/register.h"
+#include "driver/uart.h"
 #include "global.h"
 #include "hardware.h"
-#include "i2c.h"
-#include "i2c_device.h"
 #include "isr.h"
 #include "lifetime.h"
 #include "msp_displayport.h"
 #include "osd_display.h"
-#include "register.h"
 #include "rom.h"
 #include "smartaudio_protocol.h"
-#include "uart.h"
 
 uint8_t UNUSED = 0;
 uint8_t rf_init_done = 0;

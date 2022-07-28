@@ -2,14 +2,14 @@
 #include "common.h"
 #include "debug.h"
 #include "dm6300.h"
+#include "driver/i2c_device.h"
+#include "driver/register.h"
+#include "driver/uart.h"
 #include "global.h"
 #include "hardware.h"
-#include "i2c_device.h"
 #include "isr.h"
 #include "msp_displayport.h"
-#include "register.h"
 #include "rom.h"
-#include "uart.h"
 
 uint8_t SA_lock = 0;
 uint8_t SA_config = 0;

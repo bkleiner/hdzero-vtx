@@ -1,12 +1,12 @@
 #include "rom.h"
 #include "common.h"
 #include "dm6300.h"
+#include "driver/i2c.h"
+#include "driver/i2c_device.h"
+#include "driver/spi.h"
+#include "driver/uart.h"
 #include "global.h"
 #include "hardware.h"
-#include "i2c.h"
-#include "i2c_device.h"
-#include "spi.h"
-#include "uart.h"
 
 #ifdef _RF_CALIB
 #define CAL_BUF_MAX 8

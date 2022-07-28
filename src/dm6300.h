@@ -27,7 +27,6 @@ void DM6300_init5();
 void DM6300_init6(uint8_t sel);
 void DM6300_init7(uint8_t sel);
 void DM6300_RFTest();
-// void DM6300_M0();
 
 extern int16_t auxadc_offset;
 extern uint8_t table_power[FREQ_MAX_EXT + 1][POWER_MAX + 1];

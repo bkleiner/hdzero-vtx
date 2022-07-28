@@ -1,7 +1,7 @@
 #include "isr.h"
 #include "common.h"
+#include "driver/uart.h"
 #include "global.h"
-#include "uart.h"
 
 BIT_TYPE btn1_tflg = 0;
 BIT_TYPE pwr_sflg = 0; // power autoswitch flag

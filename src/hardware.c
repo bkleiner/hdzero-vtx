@@ -3,16 +3,16 @@
 #include "common.h"
 #include "debug.h"
 #include "dm6300.h"
+#include "driver/i2c.h"
+#include "driver/i2c_device.h"
+#include "driver/register.h"
+#include "driver/spi.h"
+#include "driver/uart.h"
 #include "global.h"
-#include "i2c.h"
-#include "i2c_device.h"
 #include "isr.h"
 #include "lifetime.h"
 #include "msp_displayport.h"
-#include "register.h"
 #include "smartaudio_protocol.h"
-#include "spi.h"
-#include "uart.h"
 
 uint8_t KEYBOARD_ON = 0; // avoid conflict between keyboard and cam_control
 uint8_t EE_VALID = 0;
