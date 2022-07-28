@@ -4,8 +4,8 @@
 #include "stdint.h"
 
 #include "common.h"
-#include "i2c.h"
-#include "i2c_device.h"
+#include "driver/i2c.h"
+#include "driver/i2c_device.h"
 
 typedef enum {
     ON,

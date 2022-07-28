@@ -4,14 +4,14 @@
 #include "common.h"
 #include "debug.h"
 #include "dm6300.h"
+#include "driver/spi.h"
+#include "driver/uart.h"
 #include "global.h"
 #include "hardware.h"
 #include "isr.h"
 #include "lifetime.h"
 #include "osd_display.h"
 #include "smartaudio_protocol.h"
-#include "spi.h"
-#include "uart.h"
 
 uint8_t fc_lock = 0;
 uint8_t fc_variant[4] = {'B', 'T', 'F', 'L'};

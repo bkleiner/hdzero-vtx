@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "register.h"
+#include "driver/register.h"
 #include "toolchain.h"
 
 #define VERSION 0x41

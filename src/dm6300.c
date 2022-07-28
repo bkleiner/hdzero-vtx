@@ -2,11 +2,11 @@
 
 #include "common.h"
 #include "debug.h"
+#include "driver/i2c.h"
+#include "driver/i2c_device.h"
+#include "driver/spi.h"
 #include "global.h"
 #include "hardware.h"
-#include "i2c.h"
-#include "i2c_device.h"
-#include "spi.h"
 
 typedef struct {
     uint8_t trans;
@@ -247,6 +247,7 @@ void DM6300_AUXADC_Calib() {
     DM6300_InitAUXADC();
     WriteReg(0, 0x8F, 0x11);
 }
+
 /*void DM6300_CalibRF()
 {
     uint8_t i, j;

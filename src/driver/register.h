@@ -1,5 +1,5 @@
-#ifndef __SFR_EXT_H_
-#define __SFR_EXT_H_
+#ifndef __REGISTER_H_
+#define __REGISTER_H_
 
 #include "stdint.h"
 
@@ -200,4 +200,4 @@ void OSD_CH_wr(uint16_t addr, uint8_t dat);
 */
 void DP_tx(uint8_t dat);
 
-#endif /* __SFR_EXT_H_ */
+#endif /* __REGISTER_H_ */

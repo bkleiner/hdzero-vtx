@@ -2,9 +2,9 @@
 #define __LIFETIME_H_
 
 #include "common.h"
+#include "driver/i2c.h"
 #include "global.h"
 #include "hardware.h"
-#include "i2c.h"
 #include "isr.h"
 
 void Get_EEP_LifeTime(void);

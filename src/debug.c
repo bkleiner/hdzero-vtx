@@ -3,10 +3,10 @@
 #include "camera.h"
 #include "common.h"
 #include "dm6300.h"
+#include "driver/i2c.h"
+#include "driver/spi.h"
+#include "driver/uart.h"
 #include "global.h"
-#include "i2c.h"
-#include "spi.h"
-#include "uart.h"
 
 #include <stdio.h>
 
@@ -401,8 +401,6 @@ void debug_monitor(void) {
         WriteReg(0, 0x8F, 0x11);
     else if (!stricmp(argv[0], "bboff"))
         WriteReg(0, 0x8F, 0x01);
-    // else if ( !stricmp( argv[0], "m0" ) )
-    // DM6300_M0();
     else if (!stricmp(argv[0], "ch")) {
         if (argc == 3 && Asc2Bin(argv[1]) <= FREQ_MAX && Asc2Bin(argv[2]) <= POWER_MAX) {
             RF_FREQ = Asc2Bin(argv[1]);
