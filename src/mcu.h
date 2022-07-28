@@ -1,5 +1,5 @@
-#ifndef __ISR_H_
-#define __ISR_H_
+#ifndef __MCU_H_
+#define __MCU_H_
 
 #include "stdint.h"
 
@@ -17,6 +17,8 @@ extern BIT_TYPE timer_8hz;
 extern BIT_TYPE timer_16hz;
 extern BIT_TYPE RS0_ERR;
 
-void CPU_init(void);
+void mcu_init();
+void timer_task();
+void sa_timer_task();
 
-#endif /* __ISR_H_ */
+#endif /* __MCU_H_ */

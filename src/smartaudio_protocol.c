@@ -2,14 +2,15 @@
 #include "common.h"
 #include "debug.h"
 #include "dm6300.h"
+#include "global.h"
+#include "hardware.h"
+#include "mcu.h"
+#include "msp_displayport.h"
+#include "rom.h"
+
 #include "driver/i2c_device.h"
 #include "driver/register.h"
 #include "driver/uart.h"
-#include "global.h"
-#include "hardware.h"
-#include "isr.h"
-#include "msp_displayport.h"
-#include "rom.h"
 
 uint8_t SA_lock = 0;
 uint8_t SA_config = 0;
@@ -397,7 +398,7 @@ void SA_Update(uint8_t cmd) {
     //_outchar('_');
 }
 
-uint8_t SA_task() {
+uint8_t sa_task() {
     static uint8_t SA_state = 0, SA = 0xFF;
 
     if (SA_state == 0) { // monitor SA pin
