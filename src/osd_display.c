@@ -25,7 +25,9 @@ uint8_t dptx_buf[256];
 uint8_t dptx_rptr = 0;
 uint8_t dptx_wptr = 0;
 
-uint8_t current_row = 0;
+uint8_t dirty_rows[HD_VMAX];
+uint8_t row_updates[HD_VMAX];
+
 uint8_t hmax = SD_HMAX;
 uint8_t vmax = SD_VMAX;
 
@@ -77,10 +79,11 @@ void DP_SEND_20M(uint8_t c) {
 
 void dptx_task() {
     while (dptx_wptr != dptx_rptr) {
-        if (RF_BW == BW_20M)
+        if (RF_BW == BW_20M) {
             DP_SEND_20M(dptx_buf[dptx_rptr++]);
-        else
+        } else {
             DP_SEND_27M(dptx_buf[dptx_rptr++]);
+        }
     }
 }
 
@@ -260,6 +263,8 @@ void osd_clear_screen() {
     memset(osd_buf, 0x20, sizeof(osd_buf));
     memset(loc_buf, 0x00, sizeof(loc_buf));
     memset(page_extend_buf, 0x00, sizeof(page_extend_buf));
+    memset(dirty_rows, 0x00, sizeof(dirty_rows));
+    memset(row_updates, 0x00, sizeof(row_updates));
 }
 
 void osd_reset() {
@@ -275,6 +280,7 @@ void osd_write_data(uint8_t row, uint8_t col_start, uint8_t page_extend, uint8_t
     uint8_t col_shift = 0;
 
     osd_ready = 0;
+    dirty_rows[row] = 1;
 
     // only used in low res mode and only set once for a full string
     loc_buf[row][col_start >> 3] |= (1 << (col & 0x07));
@@ -318,16 +324,43 @@ void osd_set_config(uint8_t font, osd_resolution_t res) {
 }
 
 void osd_submit() {
-    current_row = 0;
     osd_ready = 1;
+}
+
+uint8_t osd_next_row() {
+    uint8_t i;
+
+    // check if we have a dirty row
+    for (i = 0; i < vmax; i++) {
+        if (dirty_rows[i]) {
+            dirty_rows[i] = 0;
+            row_updates[i] = 0;
+            return i;
+        }
+    }
+
+    // not dirty row found, lets just update everything else
+    for (i = 0; i < vmax; i++) {
+        if (row_updates[i]) {
+            row_updates[i] = 0;
+            return i;
+        }
+    }
+
+    // no row to update left, lets reset and start over
+    // by setting eveything but the 0th bit
+    // because we gonna update that right away
+    memset(row_updates, 1, sizeof(row_updates));
+    row_updates[0] = 0;
+
+    return 0;
 }
 
 void osd_task() {
     uint8_t len = 0;
 
-    if (osd_ready && current_row < vmax) {
-        len = osd_build_dp_update(current_row);
-        current_row++;
+    if (osd_ready) {
+        len = osd_build_dp_update(osd_next_row());
     } else if (timer_8hz) {
         // send param to VRX -- 8HZ
         len = osd_build_dp_metadata();
