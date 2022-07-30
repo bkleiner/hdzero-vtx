@@ -184,7 +184,7 @@ void SA_Delay_init()
     
     if(SA_saved == 0){
         if(seconds >= WAIT_SA_CONFIG){
-            I2C_Write(ADDR_EEPROM, EEP_ADDR_SA_LOCK, SA_lock, 0, 0);
+            I2C_Write8(ADDR_EEPROM, EEP_ADDR_SA_LOCK, SA_lock);
             #ifdef _DEBUG_MODE
             debugf("\r\nSave SA_lock(%x) to EEPROM", (uint16_t)SA_lock);
             #endif
