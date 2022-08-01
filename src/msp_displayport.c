@@ -128,219 +128,477 @@ void msp_task() {
     set_vtx_param();
 }
 
-uint8_t msp_read_one_frame() {
-    static uint8_t state = MSP_HEADER_START;
-    static uint8_t cur_cmd = CUR_OTHERS;
-    static uint8_t length, osd_len;
-    static uint8_t ptr = 0; //write ptr of msp_rx_buf
-    static uint8_t crc = 0;
-    static uint16_t cmd_u16 = 0;
-    static uint16_t len_u16 = 0;
-    
-    uint8_t i,ret,full_frame,rx;
+void msp_parse_vtx_config() {
+    uint8_t nxt_ch = 0;
+    uint8_t nxt_pwr = 0;
+    uint8_t pit_update = 0;
+    uint8_t needSaveEEP = 0;
+    static uint8_t last_pwr = 255;
+    static uint8_t last_lp = 255;
+    static uint8_t last_pit = 255;
 
-    ret = 0;
-    full_frame = 0;
-    for(i=0;i<16;i++) {
-        if((!CMS_ready()) || full_frame) return ret;
-        rx = CMS_rx();
+    if (!(fc_lock & FC_VTX_CONFIG_LOCK)) {
+        // first request, set lock and return
+        // maybe it could just run anyway?
+        fc_lock |= FC_VTX_CONFIG_LOCK;
+        return;
+    }
 
-        switch(state) {
-            case MSP_HEADER_START:
-                if(rx == MSP_HEADER_START_BYTE) {
-                    ptr = 0;
-                    state = MSP_HEADER_M;
-                }
-                #ifdef _DEBUG_DISPLAYPORT
-                else 
-                    _outchar('&');
-                #endif
-                break;
+    fc_band_rx = msp_rx_buf[1];
+    fc_channel_rx = msp_rx_buf[2];
+    fc_pwr_rx = msp_rx_buf[3];
+    fc_pit_rx = msp_rx_buf[4];
+    fc_lp_rx = msp_rx_buf[8];
 
-            case MSP_HEADER_M:
-                if(rx == MSP_HEADER_M_BYTE){
-                    state = MSP_PACKAGE_REPLAY1;
-                }else if(rx == MSP_HEADER_M2_BYTE){
-                    state = MSP_PACKAGE_REPLAY2;
-                }else{
-                    state = MSP_HEADER_START;
-                }
-                break;
+#ifdef _DEBUG_MODE
+    debugf("\r\nmsp_parse_vtx_config");
+    debugf("\r\n    fc_vtx_dev:    %x", (uint16_t)msp_rx_buf[0]);
+    debugf("\r\n    fc_band_rx:    %x", (uint16_t)msp_rx_buf[1]);
+    debugf("\r\n    fc_channel_rx: %x", (uint16_t)msp_rx_buf[2]);
+    debugf("\r\n    fc_pwr_rx:     %x", (uint16_t)msp_rx_buf[3]);
+    debugf("\r\n    fc_pit_rx :    %x", (uint16_t)msp_rx_buf[4]);
+    debugf("\r\n    fc_vtx_status: %x", (uint16_t)msp_rx_buf[7]);
+    debugf("\r\n    fc_lp_rx:      %x", (uint16_t)msp_rx_buf[8]);
+    debugf("\r\n    fc_bands:      %x", (uint16_t)msp_rx_buf[12]);
+    debugf("\r\n    fc_channels:   %x", (uint16_t)msp_rx_buf[13]);
+    debugf("\r\n    fc_powerLevels %x", (uint16_t)msp_rx_buf[14]);
+#endif
 
-            case MSP_PACKAGE_REPLAY1: //0x3E
-                if(rx == MSP_PACKAGE_REPLAY_BYTE){
-                    state = MSP_LENGTH;
-                }else {
-                    state = MSP_HEADER_START;
-                }
-                break;
+    if (SA_lock)
+        return;
 
-            case MSP_LENGTH:
-                crc = rx;
-                state = MSP_CMD;
-                length = rx;
-                osd_len = rx - 4;
-                break;
+    // update LP_MODE
+    if (fc_lp_rx != last_lp) {
+        last_lp = fc_lp_rx;
+        if (fc_lp_rx < 2) {
+            LP_MODE = fc_lp_rx;
+        }
+        needSaveEEP = 1;
+    }
+    // update channel
+    if (fc_band_rx == 5) // race band
+        nxt_ch = fc_channel_rx - 1;
+    else if (fc_band_rx == 4) { // fashark band
+        if (fc_channel_rx == 2)
+            nxt_ch = 8;
+        else if (fc_channel_rx == 4)
+            nxt_ch = 9;
+    }
+    if (RF_FREQ != nxt_ch) {
+        vtx_channel = nxt_ch;
+        RF_FREQ = nxt_ch;
+        DM6300_SetChannel(RF_FREQ);
+        needSaveEEP = 1;
+    }
+    debugf("\r\nmsp_parse_vtx_config pwr:%x, pit:%x", (uint16_t)nxt_pwr, (uint16_t)fc_pit_rx);
 
-            case MSP_CMD:
-                crc ^= rx;
-                if(length == 0){
-                    cur_cmd = CUR_OTHERS;
-                    state = MSP_CRC1;
-                }else{
-                    if(rx == MSP_CMD_DISPLAYPORT_BYTE) {
-                        cur_cmd = CUR_DISPLAYPORT;
-                    }else if(rx == MSP_CMD_RC_BYTE) {
-                        cur_cmd = CUR_RC;
-                    }else if(rx == MSP_CMD_STATUS_BYTE) {
-                        cur_cmd = CUR_STATUS;
-                    }else if(rx == MSP_CMD_FC_VARIANT) {
-                        cur_cmd = CUR_FC_VARIANT;
-                    }else if(rx == MSP_CMD_VTX_CONFIG){
-                        cur_cmd = CUR_VTX_CONFIG;
-                    }
-                    state = MSP_RX1;
-                }
-                //debugf("\r\n%x ",(uint16_t)rx);
-                break;
-            
-            case MSP_RX1:
-                crc ^= rx;
-                msp_rx_buf[ptr++] = rx; ptr &= 63;
-                length--;
-                if(length == 0)
-                    state = MSP_CRC1;
-                break;
+    // update pit
+    if (fc_pit_rx != last_pit) {
+        PIT_MODE = fc_pit_rx & 1;
+        debugf("\r\nPIT_MODE = %x", (uint16_t)PIT_MODE);
+        if (PIT_MODE) {
+            DM6300_SetPower(POWER_MAX + 1, RF_FREQ, pwr_offset);
+            cur_pwr = POWER_MAX + 1;
+        } else {
+#ifndef VIDEO_PAT
+#ifdef VTX_L
+            if ((RF_POWER == 3) && (!g_IS_ARMED))
+                pwr_lmt_done = 0;
+            else
+#endif
+#endif
+            {
+                DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
+                cur_pwr = RF_POWER;
+            }
+        }
+        last_pit = fc_pit_rx;
+        vtx_pit_save = PIT_MODE;
+        needSaveEEP = 1;
+    }
 
-            case MSP_CRC1:
-                if(rx == crc){
-                    if(cur_cmd == CUR_STATUS)
-                        parse_status();
-                    else if(cur_cmd == CUR_RC)
-                        parse_rc();
-                    else if(cur_cmd == CUR_FC_VARIANT)
-                        parse_variant();
-                    else if(cur_cmd == CUR_VTX_CONFIG)
-                        parse_vtx_config();
-                    else if(cur_cmd == CUR_DISPLAYPORT)
-                        ret = parse_displayport(osd_len);
-                    full_frame = 1;
-                    if(fc_lock & FC_VTX_CONFIG_LOCK){
-                        if(!(fc_lock & FC_INIT_VTX_TABLE_LOCK)) {
-                            if(fc_lock & FC_VARIANT_LOCK){
-                                fc_lock |= FC_INIT_VTX_TABLE_LOCK;
-                                if(fc_variant[0] == 'B' && fc_variant[1] == 'T' && fc_variant[2] == 'F' && fc_variant[3] == 'L'){
-                                    #ifdef INIT_VTX_TABLE
-                                    InitVtxTable();
-                                    #endif
-                                }
-                            }
-                        }
-                    }
-                }
-                #ifdef _DEBUG_DISPLAYPORT
+    // update power
+    nxt_pwr = fc_pwr_rx - 1;
+    if (last_pwr != nxt_pwr) {
+        if (last_pwr == POWER_MAX + 1) {
+            // Exit 0mW
+            if (cur_pwr == POWER_MAX + 2) {
+                if (PIT_MODE)
+                    Init_6300RF(RF_FREQ, POWER_MAX + 1);
                 else
-                    _outchar('^');
-                #endif
-                    state = MSP_HEADER_START;
-                break;
+                    Init_6300RF(RF_FREQ, RF_POWER);
+                needSaveEEP = 1;
+            }
+        } else if (nxt_pwr == POWER_MAX + 1) {
+            // Enter 0mW
+            if (cur_pwr != POWER_MAX + 2) {
+                WriteReg(0, 0x8F, 0x10);
+                cur_pwr = POWER_MAX + 2;
+                vtx_pit_save = PIT_0MW;
+                temp_err = 1;
+            }
+        } else if (nxt_pwr <= POWER_MAX) {
+            RF_POWER = nxt_pwr;
+            if (cur_pwr != RF_POWER) {
+                if (PIT_MODE) {
 
-            case MSP_PACKAGE_REPLAY2: //0x3E
-                if(rx == MSP_PACKAGE_REPLAY_BYTE){
-                    state = MSP_ZERO;
-                }else{
-                    state = MSP_HEADER_START;
+                    DM6300_SetPower(POWER_MAX + 1, RF_FREQ, pwr_offset);
+                    cur_pwr = RF_POWER + 1;
+                } else {
+#ifndef VIDEO_PAT
+#ifdef VTX_L
+                    if ((RF_POWER == 3) && (!g_IS_ARMED))
+                        pwr_lmt_done = 0;
+                    else
+#endif
+#endif
+                    {
+                        DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
+                        cur_pwr = RF_POWER;
+                    }
                 }
-                break;
+                needSaveEEP = 1;
+            }
+        }
+        last_pwr = nxt_pwr;
+    }
 
-            case MSP_ZERO: //0x00
-                crc = crc8tab[rx]; // 0 ^ rx = rx
-                if(rx == 0x00){
-                    state = MSP_CMD_L;
-                }else{
-                    state = MSP_HEADER_START;
-                }
-                break;
-
-            case MSP_CMD_L:
-                crc = crc8tab[crc ^ rx];
-                cmd_u16 = rx;
-                state = MSP_CMD_H;
-                break;
-
-            case MSP_CMD_H:
-                crc = crc8tab[crc ^ rx];
-                cmd_u16 += ((uint16_t)rx << 8);
-                state = MSP_LEN_L;
-                break;
-
-            case MSP_LEN_L:
-                crc = crc8tab[crc ^ rx];
-                len_u16 = rx;
-                state = MSP_LEN_H;
-                break;
-
-            case MSP_LEN_H:
-                crc = crc8tab[crc ^ rx];
-                len_u16 += ((uint16_t)rx << 8);
-                ptr = 0;
-                state = MSP_RX2;
-                break;
-
-            case MSP_RX2:
-                crc = crc8tab[crc ^ rx];
-                msp_rx_buf[ptr++] = rx; ptr &= 63;
-                len_u16--;
-                if(len_u16 == 0)
-                    state = MSP_CRC2;
-                break;
-
-            case MSP_CRC2:
-                if(crc == rx)
-                    parseMspVtx_V2(cmd_u16);
-                #ifdef _DEBUG_MODE
-                debugf("\r\ncrc : %x,%x", (uint16_t)crc, (uint16_t)rx);
-                #endif
-
-            default:
-                state = MSP_HEADER_START;
-                break;
-          }//switch(state)
-        } //i
-        return ret;
+    if (needSaveEEP)
+        Setting_Save();
 }
 
-void clear_screen(){
-    memset(osd_buf,0x20,sizeof(osd_buf));
-    memset(loc_buf,0x00,sizeof(loc_buf));
-    memset(page_extend_buf,0x00,sizeof(page_extend_buf));
+void clear_screen() {
+    memset(osd_buf, 0x20, sizeof(osd_buf));
+    memset(loc_buf, 0x00, sizeof(loc_buf));
+    memset(page_extend_buf, 0x00, sizeof(page_extend_buf));
 }
 
 void write_string(uint8_t rx, uint8_t row, uint8_t col, uint8_t page_extend) {
-    if(disp_mode == DISPLAY_OSD){
-        if(resolution == HD_5018){
-            if(row < HD_VMAX && col < HD_HMAX){
+    if (disp_mode == DISPLAY_OSD) {
+        if (resolution == HD_5018) {
+            if (row < HD_VMAX && col < HD_HMAX) {
                 osd_buf[row][col] = rx;
-                if(page_extend)
-                    page_extend_buf[row][col>>3] |= (1 << (col & 0x07));
+                if (page_extend)
+                    page_extend_buf[row][col >> 3] |= (1 << (col & 0x07));
                 else
-                    page_extend_buf[row][col>>3] &= (0xff - (1 << (col & 0x07)));
+                    page_extend_buf[row][col >> 3] &= (0xff - (1 << (col & 0x07)));
             }
-        }else if(resolution == SD_3016 || resolution == HD_3016){
-            if(row < SD_VMAX && col < SD_HMAX){
+        } else if (resolution == SD_3016 || resolution == HD_3016) {
+            if (row < SD_VMAX && col < SD_HMAX) {
                 osd_buf[row][col] = rx;
-                if(page_extend)
-                    page_extend_buf[row][col>>3] |= (1 << (col & 0x07));
+                if (page_extend)
+                    page_extend_buf[row][col >> 3] |= (1 << (col & 0x07));
                 else
-                    page_extend_buf[row][col>>3] &= (0xff - (1 << (col & 0x07)));
+                    page_extend_buf[row][col >> 3] &= (0xff - (1 << (col & 0x07)));
             }
         }
     }
 }
 
-void mark_loc(uint8_t row, uint8_t col)
-{
-    loc_buf[row][col>>3] |= (1 << (col & 0x07));
+void mark_loc(uint8_t row, uint8_t col) {
+    loc_buf[row][col >> 3] |= (1 << (col & 0x07));
+}
+
+uint8_t msp_parse_displayport(uint8_t len) {
+    uint8_t row = 0, col = 0;
+    uint8_t page_extend = 0;
+    uint8_t ptr = 0;
+
+    if (len == 0)
+        return 0;
+
+    switch (msp_rx_buf[0]) {
+    case SUBCMD_CLEAR:
+        osd_ready = 0;
+
+        if (disp_mode == DISPLAY_OSD)
+            clear_screen();
+
+#ifdef _DEBUG_DISPLAYPORT
+        _outchar('\r');
+        _outchar('\n');
+        _outchar('C');
+#endif
+        return 0;
+
+    case SUBCMD_CONFIG:
+        fontType = msp_rx_buf[1];
+        resolution = msp_rx_buf[2];
+
+        if (resolution != resolution_last)
+            fc_init();
+
+        resolution_last = resolution;
+        return 0;
+
+    case SUBCMD_DRAW:
+#ifdef _DEBUG_DISPLAYPORT
+        _outchar('D');
+        _outchar(' ');
+#endif
+        if (!(fc_lock & FC_OSD_LOCK)) {
+            Flicker_LED(8);
+            fc_lock |= FC_OSD_LOCK;
+        }
+
+        osd_ready = 1;
+        return 1;
+
+    case SUBCMD_WRITE:
+        osd_ready = 0;
+
+#ifdef _DEBUG_DISPLAYPORT
+        _outchar('W');
+#endif
+
+        row = msp_rx_buf[1];
+        col = msp_rx_buf[2];
+        page_extend = msp_rx_buf[3] & 0x01;
+
+        if (resolution == HD_3016) {
+            row -= 1;
+            col -= 10;
+        }
+        mark_loc(row, col);
+
+        for (ptr = 0; ptr < len; ptr++) {
+            write_string(msp_rx_buf[4 + ptr], row, col + ptr, page_extend);
+        }
+        break;
+
+    default:
+    case SUBCMD_RELEASE:
+    case SUBCMD_HEARTBEAT:
+        return 0;
+    }
+
+    return 0;
+}
+
+void msp_parse_rc() {
+    uint16_t roll, pitch, yaw, throttle;
+
+    if (!(fc_lock & FC_RC_LOCK))
+        fc_lock |= FC_RC_LOCK;
+
+    roll = (msp_rx_buf[1] << 8) | msp_rx_buf[0];
+    pitch = (msp_rx_buf[3] << 8) | msp_rx_buf[2];
+    yaw = (msp_rx_buf[5] << 8) | msp_rx_buf[4];
+    throttle = (msp_rx_buf[7] << 8) | msp_rx_buf[6];
+
+    update_cms_menu(roll, pitch, yaw, throttle);
+}
+
+uint8_t msp_handle_cmd(uint16_t cmd, uint16_t payload_len) {
+    uint8_t i;
+    uint8_t ret = 0;
+
+    switch (cmd) {
+    case MSP_CMD_FC_VARIANT:
+        if (!(fc_lock & FC_VARIANT_LOCK))
+            fc_lock |= FC_VARIANT_LOCK;
+
+        for (i = 0; i < 4; i++)
+            fc_variant[i] = msp_rx_buf[i];
+        break;
+
+    case MSP_CMD_STATUS_BYTE:
+        if (!(fc_lock & FC_STATUS_LOCK))
+            fc_lock |= FC_STATUS_LOCK;
+
+        g_IS_ARMED = (msp_rx_buf[6] & 0x01);
+        g_IS_PARALYZE = (msp_rx_buf[9] & 0x80);
+        disarmed = !g_IS_ARMED;
+        break;
+
+    case MSP_CMD_RC_BYTE:
+        msp_parse_rc();
+        break;
+
+    case MSP_CMD_DISPLAYPORT_BYTE:
+        ret = msp_parse_displayport(payload_len);
+        break;
+
+    case MSP_CMD_VTX_CONFIG:
+        msp_parse_vtx_config();
+        break;
+
+    default:
+        // unknown command do nothing
+        break;
+    }
+
+    if (fc_lock & FC_VTX_CONFIG_LOCK) {
+        if (!(fc_lock & FC_INIT_VTX_TABLE_LOCK)) {
+            if (fc_lock & FC_VARIANT_LOCK) {
+                fc_lock |= FC_INIT_VTX_TABLE_LOCK;
+                if (fc_variant[0] == 'B' && fc_variant[1] == 'T' && fc_variant[2] == 'F' && fc_variant[3] == 'L') {
+#ifdef INIT_VTX_TABLE
+                    InitVtxTable();
+#endif
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
+uint8_t msp_read_one_frame() {
+    static uint8_t state = MSP_HEADER_START;
+    static uint8_t ptr = 0; // write ptr of msp_rx_buf
+    static uint8_t crc = 0;
+
+    static uint16_t cmd = 0;
+    static uint16_t length = 0;
+    static uint16_t payload_len = 0;
+
+    uint8_t ret = 0;
+    uint8_t full_frame = 0;
+    uint8_t i, rx;
+
+    for (i = 0; i < 16; i++) {
+        if ((!CMS_ready()) || full_frame)
+            return ret;
+
+        rx = CMS_rx();
+
+        switch (state) {
+        case MSP_HEADER_START:
+            if (rx == MSP_HEADER_START_BYTE) {
+                ptr = 0;
+                state = MSP_HEADER_M;
+            }
+#ifdef _DEBUG_DISPLAYPORT
+            else
+                _outchar('&');
+#endif
+            break;
+
+        case MSP_HEADER_M:
+            if (rx == MSP_HEADER_M_BYTE) {
+                state = MSP_PACKAGE_REPLAY1;
+            } else if (rx == MSP_HEADER_M2_BYTE) {
+                state = MSP_PACKAGE_REPLAY2;
+            } else {
+                state = MSP_HEADER_START;
+            }
+            break;
+
+        case MSP_PACKAGE_REPLAY1: // 0x3E
+            if (rx == MSP_PACKAGE_REPLAY_BYTE) {
+                state = MSP_LENGTH;
+            } else {
+                state = MSP_HEADER_START;
+            }
+            break;
+
+        case MSP_LENGTH:
+            crc = rx;
+            state = MSP_CMD;
+            length = rx;
+            payload_len = length - 4;
+            break;
+
+        case MSP_CMD:
+            crc ^= rx;
+            cmd = rx;
+            ptr = 0;
+            if (length == 0) {
+                state = MSP_CRC1;
+            } else {
+                state = MSP_RX1;
+            }
+            break;
+
+        case MSP_RX1:
+            crc ^= rx;
+            msp_rx_buf[ptr++] = rx;
+            ptr &= 63;
+            length--;
+            if (length == 0)
+                state = MSP_CRC1;
+            break;
+
+        case MSP_CRC1:
+            if (rx == crc) {
+                ret = msp_handle_cmd(cmd, payload_len);
+            }
+#ifdef _DEBUG_DISPLAYPORT
+            else {
+                _outchar('^');
+            }
+#endif
+            full_frame = 1;
+            state = MSP_HEADER_START;
+            break;
+
+        case MSP_PACKAGE_REPLAY2: // 0x3E
+            if (rx == MSP_PACKAGE_REPLAY_BYTE) {
+                state = MSP_ZERO;
+            } else {
+                state = MSP_HEADER_START;
+            }
+            break;
+
+        case MSP_ZERO:         // 0x00
+            crc = crc8tab[rx]; // 0 ^ rx = rx
+            if (rx == 0x00) {
+                state = MSP_CMD_L;
+            } else {
+                state = MSP_HEADER_START;
+            }
+            break;
+
+        case MSP_CMD_L:
+            crc = crc8tab[crc ^ rx];
+            cmd = rx;
+            state = MSP_CMD_H;
+            break;
+
+        case MSP_CMD_H:
+            crc = crc8tab[crc ^ rx];
+            cmd += ((uint16_t)rx << 8);
+            state = MSP_LEN_L;
+            break;
+
+        case MSP_LEN_L:
+            crc = crc8tab[crc ^ rx];
+            length = rx;
+            state = MSP_LEN_H;
+            break;
+
+        case MSP_LEN_H:
+            crc = crc8tab[crc ^ rx];
+            length += ((uint16_t)rx << 8);
+            payload_len = length;
+            ptr = 0;
+            state = MSP_RX2;
+            break;
+
+        case MSP_RX2:
+            crc = crc8tab[crc ^ rx];
+            msp_rx_buf[ptr++] = rx;
+            ptr &= 63;
+            length--;
+            if (length == 0)
+                state = MSP_CRC2;
+            break;
+
+        case MSP_CRC2:
+            if (crc == rx) {
+                ret = msp_handle_cmd(cmd, payload_len);
+            }
+#ifdef _DEBUG_MODE
+            debugf("\r\ncrc : %x,%x", (uint16_t)crc, (uint16_t)rx);
+#endif
+            full_frame = 1;
+            state = MSP_HEADER_START;
+            break;
+        }
+    }
+
+    return ret;
 }
 
 void init_tx_buf()
@@ -635,6 +893,7 @@ void msp_eeprom_write()
     CMS_tx(250);
     CMS_tx(250);
 }
+
 void msp_set_vtx_config(uint8_t power, uint8_t save)
 {
     uint8_t crc = 0;
@@ -687,290 +946,6 @@ void msp_set_vtx_config(uint8_t power, uint8_t save)
     
     if(save)
         msp_eeprom_write();
-}
-
-void parse_status()
-{
-    if(!(fc_lock & FC_STATUS_LOCK))
-        fc_lock |= FC_STATUS_LOCK;
-    
-    g_IS_ARMED = (msp_rx_buf[6] & 0x01);
-    g_IS_PARALYZE = (msp_rx_buf[9] & 0x80);
-    disarmed = !g_IS_ARMED;
-    //debugf("\n\rstatus:%x",msp_rx_buf[6] & 0x01);
-}
-
-void parse_variant()
-{
-    uint8_t i;
-    
-    if(!(fc_lock & FC_VARIANT_LOCK))
-        fc_lock |= FC_VARIANT_LOCK;
-    
-    for(i=0;i<4;i++)
-        fc_variant[i] = msp_rx_buf[i];
-}
-
-void parse_rc()
-{
-    uint16_t roll,pitch,yaw,throttle;
-    //static uint16_t roll_d,pitch_d,yaw_d,throttle_d;
-    
-    if(!(fc_lock & FC_RC_LOCK))
-        fc_lock |= FC_RC_LOCK;
-    
-    roll      = (msp_rx_buf[1] << 8) | msp_rx_buf[0];
-    pitch     = (msp_rx_buf[3] << 8) | msp_rx_buf[2];
-    yaw       = (msp_rx_buf[5] << 8) | msp_rx_buf[4];
-    throttle  = (msp_rx_buf[7] << 8) | msp_rx_buf[6];
-
-    update_cms_menu(roll,pitch,yaw,throttle);
-    /*
-    roll_d = roll;
-    pitch_d = pitch;
-    yaw_d = yaw;
-    throttle_d = throttle;
-    */
-}
-void parse_vtx_config()
-{
-    uint8_t nxt_ch = 0;
-    uint8_t nxt_pwr = 0;
-    uint8_t pit_update = 0;
-    uint8_t needSaveEEP = 0;
-    
-    if(!(fc_lock & FC_VTX_CONFIG_LOCK))
-        fc_lock |= FC_VTX_CONFIG_LOCK;
-    
-    if(fc_variant[0] == 'B' && fc_variant[1] == 'T' && fc_variant[2] == 'F' && fc_variant[3] == 'L')
-        ;
-    else if(fc_variant[0] == 'E' && fc_variant[1] == 'M' && fc_variant[2] == 'U' && fc_variant[3] == 'F')
-        ;
-    else
-        return;
-
-}
-
-void parseMspVtx_V2(uint16_t cmd_u16)
-{
-    uint8_t nxt_ch = 0;
-    uint8_t nxt_pwr = 0;
-    uint8_t pit_update = 0;
-    uint8_t needSaveEEP = 0;
-    static uint8_t last_pwr = 255;
-    static uint8_t last_lp = 255;
-    static uint8_t last_pit = 255;
-
-    if(cmd_u16 != MSP_CMD_VTX_CONFIG)
-        return;
-
-    fc_band_rx      = msp_rx_buf[1];
-    fc_channel_rx   = msp_rx_buf[2];
-    fc_pwr_rx       = msp_rx_buf[3];
-    fc_pit_rx       = msp_rx_buf[4];
-    fc_lp_rx        = msp_rx_buf[8];
-    
-    #ifdef _DEBUG_MODE
-    debugf("\r\nparseMspVtx_V2");
-    debugf("\r\n    fc_vtx_dev:    %x", (uint16_t)msp_rx_buf[0]);
-    debugf("\r\n    fc_band_rx:    %x", (uint16_t)msp_rx_buf[1]);
-    debugf("\r\n    fc_channel_rx: %x", (uint16_t)msp_rx_buf[2]);
-    debugf("\r\n    fc_pwr_rx:     %x", (uint16_t)msp_rx_buf[3]);
-    debugf("\r\n    fc_pit_rx :    %x", (uint16_t)msp_rx_buf[4]);
-    debugf("\r\n    fc_vtx_status: %x", (uint16_t)msp_rx_buf[7]);
-    debugf("\r\n    fc_lp_rx:      %x", (uint16_t)msp_rx_buf[8]);
-    debugf("\r\n    fc_bands:      %x", (uint16_t)msp_rx_buf[12]);
-    debugf("\r\n    fc_channels:   %x", (uint16_t)msp_rx_buf[13]);
-    debugf("\r\n    fc_powerLevels %x", (uint16_t)msp_rx_buf[14]);
-    #endif
-    
-    if(SA_lock)
-        return;
-
-    //update LP_MODE
-    if(fc_lp_rx != last_lp){
-        last_lp = fc_lp_rx;
-        if(fc_lp_rx < 2){
-            LP_MODE = fc_lp_rx;
-        }
-        needSaveEEP = 1;
-    }
-    //update channel
-    if(fc_band_rx == 5)//race band
-        nxt_ch =  fc_channel_rx - 1;
-    else if(fc_band_rx == 4){ //fashark band
-        if(fc_channel_rx == 2)
-            nxt_ch = 8;
-        else if(fc_channel_rx == 4)
-            nxt_ch = 9;
-    }
-    if(RF_FREQ != nxt_ch){
-        vtx_channel = nxt_ch;
-        RF_FREQ = nxt_ch;
-        DM6300_SetChannel(RF_FREQ);
-        needSaveEEP = 1;
-    }
-    debugf("\r\nparse_vtx_config pwr:%x, pit:%x", (uint16_t)nxt_pwr, (uint16_t)fc_pit_rx);
-
-    //update pit
-    if(fc_pit_rx != last_pit)
-    {
-        PIT_MODE = fc_pit_rx & 1;
-        debugf("\r\nPIT_MODE = %x", (uint16_t)PIT_MODE);
-        if(PIT_MODE)
-        {
-            DM6300_SetPower(POWER_MAX+1, RF_FREQ, pwr_offset);
-            cur_pwr = POWER_MAX+1;
-        }else{
-            #ifndef VIDEO_PAT
-            #ifdef VTX_L
-            if((RF_POWER == 3) && (!g_IS_ARMED))
-                pwr_lmt_done = 0;
-            else
-            #endif
-            #endif
-            {
-                DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
-                cur_pwr = RF_POWER;
-            }
-        }
-        last_pit = fc_pit_rx;
-        vtx_pit_save = PIT_MODE;
-        needSaveEEP = 1;
-    }
-    
-    //update power
-    nxt_pwr = fc_pwr_rx - 1;
-    if(last_pwr != nxt_pwr){
-        if(last_pwr == POWER_MAX+1){
-            //Exit 0mW
-            if(cur_pwr == POWER_MAX+2)
-            {
-                if(PIT_MODE)
-                    Init_6300RF(RF_FREQ, POWER_MAX+1);
-                else
-                    Init_6300RF(RF_FREQ, RF_POWER);
-                needSaveEEP = 1;
-            }
-        }else if(nxt_pwr == POWER_MAX+1){
-            //Enter 0mW
-            if(cur_pwr != POWER_MAX + 2)
-            {
-                WriteReg(0, 0x8F, 0x10);
-                cur_pwr = POWER_MAX + 2;
-                vtx_pit_save = PIT_0MW;
-                temp_err = 1;
-            }
-        }else if(nxt_pwr <= POWER_MAX){
-            RF_POWER = nxt_pwr;
-            if(cur_pwr != RF_POWER)
-            {
-                if(PIT_MODE)
-                {
-                    
-                    DM6300_SetPower(POWER_MAX+1, RF_FREQ, pwr_offset);
-                    cur_pwr = RF_POWER + 1;
-                }
-                else
-                {
-                    #ifndef VIDEO_PAT
-                    #ifdef VTX_L
-                    if((RF_POWER == 3) && (!g_IS_ARMED))
-                        pwr_lmt_done = 0;
-                    else 
-                    #endif
-                    #endif
-                    {
-                        DM6300_SetPower(RF_POWER, RF_FREQ, pwr_offset);
-                        cur_pwr = RF_POWER;
-                    }
-                }
-                needSaveEEP = 1;
-            }
-        }
-        last_pwr = nxt_pwr;
-    }
-    
-    if(needSaveEEP)
-        Setting_Save();
-
-    
-}
-
-uint8_t parse_displayport(uint8_t len) {
-    uint8_t row = 0, col = 0;
-    uint8_t page_extend = 0;
-    uint8_t ptr = 0;
-
-    if (len == 0)
-        return 0;
-
-    switch (msp_rx_buf[0]) {
-    case SUBCMD_CLEAR:
-        osd_ready = 0;
-
-        if (disp_mode == DISPLAY_OSD)
-            clear_screen();
-
-#ifdef _DEBUG_DISPLAYPORT
-        _outchar('\r');
-        _outchar('\n');
-        _outchar('C');
-#endif
-        return 0;
-
-    case SUBCMD_CONFIG:
-        fontType = msp_rx_buf[1];
-        resolution = msp_rx_buf[2];
-
-        if (resolution != resolution_last)
-            fc_init();
-
-        resolution_last = resolution;
-        return 0;
-
-    case SUBCMD_DRAW:
-#ifdef _DEBUG_DISPLAYPORT
-        _outchar('D');
-        _outchar(' ');
-#endif
-        if (!(fc_lock & FC_OSD_LOCK)) {
-            Flicker_LED(8);
-            fc_lock |= FC_OSD_LOCK;
-        }
-
-        osd_ready = 1;
-        return 1;
-
-    case SUBCMD_WRITE:
-        osd_ready = 0;
-
-#ifdef _DEBUG_DISPLAYPORT
-        _outchar('W');
-#endif
-
-        row = msp_rx_buf[1];
-        col = msp_rx_buf[2];
-        page_extend = msp_rx_buf[3] & 0x01;
-
-        if (resolution == HD_3016) {
-            row -= 1;
-            col -= 10;
-        }
-        mark_loc(row, col);
-
-        for (ptr = 0; ptr < len; ptr++) {
-            write_string(msp_rx_buf[4 + ptr], row, col + ptr, page_extend);
-        }
-        break;
-
-    default:
-    case SUBCMD_RELEASE:
-    case SUBCMD_HEARTBEAT:
-        return 0;
-    }
-
-    return 0;
 }
 
 void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throttle)

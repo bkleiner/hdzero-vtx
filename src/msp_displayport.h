@@ -88,15 +88,6 @@ typedef enum{
 }msp_osd_status_e;
 
 typedef enum{
-    CUR_DISPLAYPORT,
-    CUR_RC,
-    CUR_STATUS,
-    CUR_FC_VARIANT,
-    CUR_VTX_CONFIG,
-    CUR_OTHERS
-} cur_cmd_e;
-
-typedef enum{
     SUBCMD_HEARTBEAT,
     SUBCMD_RELEASE,
     SUBCMD_CLEAR,
@@ -140,12 +131,6 @@ uint8_t get_tx_data_osd(uint8_t index);
 void insert_tx_buf(uint8_t len);
 void DP_tx_task();
 void msp_cmd_tx();
-void parse_status();
-void parse_rc();
-void parse_variant();
-void parse_vtx_config();
-void parseMspVtx_V2(uint16_t cmd_u16);
-uint8_t parse_displayport(uint8_t len);
 void update_cms_menu(uint16_t roll, uint16_t pitch, uint16_t yaw, uint16_t throttle);
 void vtx_menu_init();
 void update_vtx_menu_param(uint8_t vtx_state);
