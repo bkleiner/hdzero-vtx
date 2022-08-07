@@ -1,52 +1,58 @@
 #ifndef __EEPROM_H_
 #define __EEPROM_H_
 
+#include "stdint.h"
+
 #define EEPROM_SIZE 0xFF
-
-#define EEPROM_ADDR_RF_FREQ 0x80
-#define EEPROM_ADDR_RF_POWER 0x81
-#define EEPROM_ADDR_LPMODE 0x82
-#define EEPROM_ADDR_PITMODE 0x83
-#define EEPROM_ADDR_25MW 0x84
-#define EEPROM_ADDR_SA_LOCK 0x88
-#define EEPROM_ADDR_POWER_LOCK 0x89
-#define EEPROM_ADDR_VTX_CONFIG 0x8a
-
-// camera parameter
-// [3:0] used for runcam v1
-// [7:4] used for runcam v2
-#define EEPROM_ADDR_CAM_PROFILE 0x3f
-
-//                              Micro V1    Micro V2  Nano V2     Nano Lite
-#define EEPROM_ADDR_CAM_BRIGHTNESS 0x40 //      0x50      0x60        0x70
-#define EEPROM_ADDR_CAM_SHARPNESS 0x41  //      0x51      0x61        0x71
-#define EEPROM_ADDR_CAM_SATURATION 0x42 //      0x52      0x62        0x72
-#define EEPROM_ADDR_CAM_CONTRAST 0x43   //      0x53      0x63        0x73
-#define EEPROM_ADDR_CAM_HVFLIP 0x44     //      0x54      0x64        0x74
-#define EEPROM_ADDR_CAM_NIGHTMODE 0x45  //      0x55      0x65        0x75
-#define EEPROM_ADDR_CAM_RATIO 0x46      //      0x56      0x66        0x76
-#define EEPROM_ADDR_CAM_WBMODE 0x47     //      0x57      0x67        0x77
-#define EEPROM_ADDR_CAM_WBRED 0x48      //      0x58      0x68        0x78
-//#define EEPROM_ADDR_CAM_WBRED 0x49      //      0x59      0x69        0x79
-//#define EEPROM_ADDR_CAM_WBRED 0x4a      //      0x5a      0x6a        0x7a
-//#define EEPROM_ADDR_CAM_WBRED 0x4b      //      0x5b      0x6b        0x7b
-#define EEPROM_ADDR_CAM_WBBLUE 0x4c //      0x5c      0x6c        0x7c
-//#define EEPROM_ADDR_CAM_WBBLUE 0x4d     //      0x5d      0x6d        0x7d
-//#define EEPROM_ADDR_CAM_WBBLUE 0x4e     //      0x5e      0x6e        0x7e
-//#define EEPROM_ADDR_CAM_WBBLUE 0x4f     //      0x5f      0x6f        0x7f
-
-#define EEPROM_ADDR_DCOC_EN 0xC0
-#define EEPROM_ADDR_DCOC_IH 0xC1
-#define EEPROM_ADDR_DCOC_IL 0xC2
-#define EEPROM_ADDR_DCOC_QH 0xC3
-#define EEPROM_ADDR_DCOC_QL 0xC4
-
-#define EEPROM_ADDR_LIFETIME_0 0xF0
-#define EEPROM_ADDR_LIFETIME_1 0xF1
-#define EEPROM_ADDR_LIFETIME_2 0xF2
-#define EEPROM_ADDR_LIFETIME_3 0xF3
-
 #define EEPROM_ADDR_MAGIC 0xFA
+
+#define CAMERA_WBMODE_MAX 4
+
+typedef struct {
+    uint8_t brightness;
+    uint8_t sharpness;
+    uint8_t saturation;
+    uint8_t contrast;
+    uint8_t hv_flip;
+    uint8_t night_mode;
+    uint8_t ratio;
+    uint8_t wb_mode;
+    uint8_t wb_red[CAMERA_WBMODE_MAX];
+    uint8_t wb_blue[CAMERA_WBMODE_MAX];
+} eeprom_camera_profile_t;
+
+typedef struct {
+    uint8_t frequency;
+    uint8_t power;
+    uint8_t lp_mode;
+    uint8_t pit_mode;
+    uint8_t offset_25mw;
+    uint8_t _unused0[4];
+    uint8_t sa_lock;
+    uint8_t power_lock;
+    uint8_t _unused1;
+} eeprom_vtx_config_t;
+
+typedef struct {
+    uint8_t enable;
+    uint8_t ih;
+    uint8_t il;
+    uint8_t qh;
+    uint8_t ql;
+} eeprom_dcoc_param_t;
+
+typedef struct {
+    uint8_t power_table[0x40];                  // 0x00 - 0x40
+    eeprom_camera_profile_t camera_profiles[4]; // 0x40 - 0x80
+    eeprom_vtx_config_t vtx_config;             // 0x80 - 0x8c
+    uint8_t _unused0[0x34];                     // 0x8C - 0xC0
+    eeprom_dcoc_param_t dcoc;                   // 0xC0 - 0xC5
+    uint8_t _unused1[0x2B];                     // 0xC5 - 0xF0
+    uint8_t lifetime[4];                        // 0xF0 - 0xF5
+    uint8_t _unused2[6];                        // 0xF5 - 0xFA
+    uint8_t magic;                              // 0xFA - 0xFB
+    uint8_t _unused3[4];                        // 0xFB - 0xFF
+} eeprom_storage_t;
 
 void eeprom_init();
 void eeprom_load();

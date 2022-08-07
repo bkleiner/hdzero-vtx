@@ -1,10 +1,13 @@
 #include "eeprom.h"
 
+#include <stddef.h>
+
 #include "driver/i2c_device.h"
 
 #include "debug.h"
 
 uint8_t eeprom_content[EEPROM_SIZE];
+eeprom_storage_t *storage = (eeprom_storage_t *)eeprom_content;
 
 void eeprom_init() {
     const uint8_t ret = i2c_write8(ADDR_EEPROM, EEPROM_ADDR_MAGIC, 0xDE);
@@ -33,6 +36,7 @@ void eeprom_load() {
         debugf("%02X%02X%02X%02X", eeprom_content[i++], eeprom_content[i++], eeprom_content[i++], eeprom_content[i++]);
         debugf("\r\n");
     }
+    debugf("eeprom magic: %x \r\n", storage->magic);
     debugf("\r\n");
 #endif
 }
