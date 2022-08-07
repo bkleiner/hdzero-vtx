@@ -44,7 +44,7 @@ typedef struct {
 typedef struct {
     uint8_t power_table[0x40];                  // 0x00 - 0x40
     eeprom_camera_profile_t camera_profiles[4]; // 0x40 - 0x80
-    eeprom_vtx_config_t vtx_config;             // 0x80 - 0x8c
+    eeprom_vtx_config_t vtx;                    // 0x80 - 0x8c
     uint8_t _unused0[0x34];                     // 0x8C - 0xC0
     eeprom_dcoc_param_t dcoc;                   // 0xC0 - 0xC5
     uint8_t _unused1[0x2B];                     // 0xC5 - 0xF0
@@ -54,7 +54,7 @@ typedef struct {
     uint8_t _unused3[4];                        // 0xFB - 0xFF
 } eeprom_storage_t;
 
-extern eeprom_storage_t *storage;
+extern eeprom_storage_t *eeprom;
 
 void eeprom_init();
 void eeprom_load();

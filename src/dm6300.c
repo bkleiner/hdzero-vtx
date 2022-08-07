@@ -497,14 +497,14 @@ void dm6300_init_power_table() {
 
     for (uint8_t j = 0; j < POWER_MAX; j++) {
         for (uint8_t i = 0; i < FREQ_MAX; i++) {
-            power_table[i][j] = storage->power_table[i * POWER_MAX + j];
+            power_table[i][j] = eeprom->power_table[i * POWER_MAX + j];
             if (j == 0) {
                 power_table[i][j] += 0x0C;
             }
         }
 
-        power_table[8][j] = storage->power_table[3 * POWER_MAX + j];
-        power_table[9][j] = storage->power_table[4 * POWER_MAX + j];
+        power_table[8][j] = eeprom->power_table[3 * POWER_MAX + j];
+        power_table[9][j] = eeprom->power_table[4 * POWER_MAX + j];
         if (j == 0) { // 25mw +3dbm
             power_table[8][j] += 0x0C;
             power_table[9][j] += 0x0C;

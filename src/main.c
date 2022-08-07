@@ -45,7 +45,7 @@ void main(void) {
     camera_init();
 
     camera_detect();
-    rf_init(0, 0);
+    rf_init(eeprom->vtx.frequency, eeprom->vtx.power);
 
     while (1) {
         time_delay_ms(500);

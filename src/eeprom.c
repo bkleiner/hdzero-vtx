@@ -8,7 +8,7 @@
 #include "debug.h"
 
 uint8_t eeprom_content[EEPROM_SIZE];
-eeprom_storage_t *storage = (eeprom_storage_t *)eeprom_content;
+eeprom_storage_t *eeprom = (eeprom_storage_t *)eeprom_content;
 
 void eeprom_init() {
     const uint8_t ret = i2c_write8(ADDR_EEPROM, EEPROM_ADDR_MAGIC, 0xDE);
@@ -29,7 +29,7 @@ void eeprom_load() {
 #ifdef DEBUG_EEPROM
     debugf("eeprom content: \r\n");
     debug_hex(eeprom_content, EEPROM_SIZE);
-    debugf("eeprom magic: %x \r\n", storage->magic);
+    debugf("eeprom magic: %x \r\n", eeprom->magic);
     debugf("\r\n");
 #endif
 }
