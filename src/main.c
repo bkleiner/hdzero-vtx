@@ -8,7 +8,24 @@
 
 #include "camera.h"
 #include "debug.h"
+#include "dm6300.h"
 #include "eeprom.h"
+
+void video_pattern_init() {
+    mcu_set_720p60();
+    mcu_write_reg(0, 0x50, 0x01);
+}
+
+void rf_init(uint8_t channel, uint8_t power) {
+    mcu_write_reg(0, 0x8F, 0x00);
+    mcu_write_reg(0, 0x8F, 0x01);
+
+    dm6300_init(channel);
+    dm6300_set_channel(channel);
+    dm6300_set_power(power, channel, 0);
+
+    mcu_write_reg(0, 0x8F, 0x11);
+}
 
 void main(void) {
     mcu_init();
@@ -27,12 +44,10 @@ void main(void) {
 
     camera_init();
 
-    static camera_mode_t camera_mode = CAM_MODE_INVALID;
-    while (1) {
-        if (camera_mode == CAM_MODE_INVALID) {
-            camera_mode = camera_detect();
-        }
+    video_pattern_init();
+    rf_init(0, 0);
 
+    while (1) {
         time_delay_ms(500);
     }
 }

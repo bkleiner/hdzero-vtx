@@ -14,8 +14,8 @@ void camera_button_init() {
 }
 
 void camera_init() {
-    camera_button_init();
     debugf("camera init\r\n");
+    camera_button_init();
 }
 
 camera_mode_t camera_detect() {

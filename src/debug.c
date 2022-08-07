@@ -37,4 +37,26 @@ void _verbosef(const char *fmt, ...) {
 
     debug_uart_write(print_buf, len);
 }
+
+uint8_t _hex_get(uint8_t *data, uint16_t size, uint16_t i) {
+    if (i < size) {
+        return data[i];
+    } else {
+        return 0x0;
+    }
+}
+
+void _debug_hex(uint8_t *data, uint16_t size) {
+    for (uint16_t i = 0; i < size;) {
+        debugf("%02X: ", i);
+        debugf("%02X%02X%02X%02X", _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++));
+        debugf(" ");
+        debugf("%02X%02X%02X%02X", _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++));
+        debugf(" ");
+        debugf("%02X%02X%02X%02X", _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++));
+        debugf(" ");
+        debugf("%02X%02X%02X%02X", _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++), _hex_get(data, size, i++));
+        debugf("\r\n");
+    }
+}
 #endif

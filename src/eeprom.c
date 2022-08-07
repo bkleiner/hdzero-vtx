@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "driver/i2c_device.h"
+#include "driver/time.h"
 
 #include "debug.h"
 
@@ -19,23 +20,15 @@ void eeprom_init() {
 }
 
 void eeprom_load() {
+    time_delay_ms(10);
     for (uint8_t i = 0; i < EEPROM_SIZE; i++) {
         eeprom_content[i] = i2c_read8(ADDR_EEPROM, i);
+        time_delay_ms(1);
     }
 
 #ifdef DEBUG_EEPROM
     debugf("eeprom content: \r\n");
-    for (uint16_t i = 0; i < EEPROM_SIZE;) {
-        debugf("%02X: ", i);
-        debugf("%02X%02X%02X%02X", eeprom_content[i++], eeprom_content[i++], eeprom_content[i++], eeprom_content[i++]);
-        debugf(" ");
-        debugf("%02X%02X%02X%02X", eeprom_content[i++], eeprom_content[i++], eeprom_content[i++], eeprom_content[i++]);
-        debugf(" ");
-        debugf("%02X%02X%02X%02X", eeprom_content[i++], eeprom_content[i++], eeprom_content[i++], eeprom_content[i++]);
-        debugf(" ");
-        debugf("%02X%02X%02X%02X", eeprom_content[i++], eeprom_content[i++], eeprom_content[i++], eeprom_content[i++]);
-        debugf("\r\n");
-    }
+    debug_hex(eeprom_content, EEPROM_SIZE);
     debugf("eeprom magic: %x \r\n", storage->magic);
     debugf("\r\n");
 #endif
@@ -44,5 +37,6 @@ void eeprom_load() {
 void eeprom_save() {
     for (uint8_t i = 0; i < EEPROM_SIZE; i++) {
         i2c_write8(ADDR_EEPROM, i, eeprom_content[i]);
+        time_delay_ms(10);
     }
 }

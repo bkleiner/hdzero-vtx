@@ -90,3 +90,9 @@ void spi_read(uint8_t trans, uint16_t addr, uint32_t *data) {
     SET_DO(0);
     SET_CS(1);
 }
+
+void spi_write_reg_map(const spi_reg_value_t *reg_map, const uint8_t size) {
+    for (uint8_t i = 0; i < size; i++) {
+        spi_write(reg_map[i].trans, reg_map[i].addr, reg_map[i].dat);
+    }
+}
