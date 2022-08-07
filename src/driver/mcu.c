@@ -1,5 +1,7 @@
 #include "mcu.h"
 
+#include "config.h"
+
 void mcu_init() {
     SCON0 = 0x50; // [7:6] uart0 mode: 0x01 = 8bit, variable baudrate(related to timer1)
                   // [4]   uart0 rx enable
@@ -67,6 +69,44 @@ uint8_t mcu_read_reg(uint8_t page, uint8_t addr) {
     }
 
     return SFR_DATA;
+}
+
+void mcu_set_720p50() {
+    mcu_write_reg(MCU_IS_RX, 0x21, 0x25);
+
+    mcu_write_reg(MCU_IS_RX, 0x40, 0x00);
+    mcu_write_reg(MCU_IS_RX, 0x41, 0x25);
+    mcu_write_reg(MCU_IS_RX, 0x42, 0xD0);
+    mcu_write_reg(MCU_IS_RX, 0x43, 0xBC);
+    mcu_write_reg(MCU_IS_RX, 0x44, 0x47);
+    mcu_write_reg(MCU_IS_RX, 0x45, 0xEE);
+    mcu_write_reg(MCU_IS_RX, 0x49, 0x04);
+    mcu_write_reg(MCU_IS_RX, 0x4c, 0x19);
+    mcu_write_reg(MCU_IS_RX, 0x4f, 0x00);
+    mcu_write_reg(MCU_IS_RX, 0x52, 0x04);
+    mcu_write_reg(MCU_IS_RX, 0x53, 0x00);
+    mcu_write_reg(MCU_IS_RX, 0x54, 0x3C);
+
+    mcu_write_reg(MCU_IS_RX, 0x06, 0x01);
+}
+
+void mcu_set_720p60() {
+    mcu_write_reg(MCU_IS_RX, 0x21, 0x1F);
+
+    mcu_write_reg(MCU_IS_RX, 0x40, 0x00);
+    mcu_write_reg(MCU_IS_RX, 0x41, 0x25);
+    mcu_write_reg(MCU_IS_RX, 0x42, 0xD0);
+    mcu_write_reg(MCU_IS_RX, 0x43, 0x72);
+    mcu_write_reg(MCU_IS_RX, 0x44, 0x46);
+    mcu_write_reg(MCU_IS_RX, 0x45, 0xEE);
+    mcu_write_reg(MCU_IS_RX, 0x49, 0x04);
+    mcu_write_reg(MCU_IS_RX, 0x4c, 0x19);
+    mcu_write_reg(MCU_IS_RX, 0x4f, 0x00);
+    mcu_write_reg(MCU_IS_RX, 0x52, 0x04);
+    mcu_write_reg(MCU_IS_RX, 0x53, 0x00);
+    mcu_write_reg(MCU_IS_RX, 0x54, 0x3C);
+
+    mcu_write_reg(MCU_IS_RX, 0x06, 0x01);
 }
 
 void ext0_isr() INTERRUPT(0) {

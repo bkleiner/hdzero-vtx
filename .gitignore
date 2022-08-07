@@ -11,3 +11,4 @@ VTX_*.map
 VTX_*.mem
 
 __pycache__
+/docs

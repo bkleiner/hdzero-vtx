@@ -182,6 +182,9 @@ void mcu_init();
 void mcu_write_reg(uint8_t page, uint8_t addr, uint8_t dat);
 uint8_t mcu_read_reg(uint8_t page, uint8_t addr);
 
+void mcu_set_720p50();
+void mcu_set_720p60();
+
 void ext0_isr() INTERRUPT(0);
 void ext1_isr() INTERRUPT(2);
 

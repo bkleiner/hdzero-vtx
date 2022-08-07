@@ -6,6 +6,7 @@
 #include "driver/time.h"
 #include "driver/uart.h"
 
+#include "camera.h"
 #include "debug.h"
 #include "eeprom.h"
 
@@ -24,8 +25,14 @@ void main(void) {
     eeprom_init();
     eeprom_load();
 
+    camera_init();
+
+    static camera_mode_t camera_mode = CAM_MODE_INVALID;
     while (1) {
+        if (camera_mode == CAM_MODE_INVALID) {
+            camera_mode = camera_detect();
+        }
+
         time_delay_ms(500);
-        debugf("Hello World!\r\n");
     }
 }

@@ -12,4 +12,6 @@
 #define ADDR_TEMPADC 0x48
 #define ADDR_RUNCAM 0x21
 
+void tc3587_init();
+
 #endif /* __I2C_DEVICE_H_ */

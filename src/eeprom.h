@@ -54,6 +54,8 @@ typedef struct {
     uint8_t _unused3[4];                        // 0xFB - 0xFF
 } eeprom_storage_t;
 
+extern eeprom_storage_t *storage;
+
 void eeprom_init();
 void eeprom_load();
 void eeprom_save();
