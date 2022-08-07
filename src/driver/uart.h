@@ -1,92 +1,30 @@
 #ifndef __UART_H_
 #define __UART_H_
 
-#include "common.h"
+#include "config.h"
+#include "stdint.h"
+#include "toolchain.h"
 
-#ifdef EXTEND_BUF
-#define BUF_MAX 2048 // 30
-#else
-#define BUF_MAX 255
-#endif
-#ifdef EXTEND_BUF1
-#define BUF1_MAX 2047 // 30
-#else
-#define BUF1_MAX 255 // 30
-#endif
+#define _CONCAT(x, y) x##_##y
+#define CONCAT(x, y) _CONCAT(x, y)
 
-#define RS_tx(c)          \
-    while (1) {           \
-        if (!RS_Xbusy) {  \
-            SBUF0 = c;    \
-            RS_Xbusy = 1; \
-            break;        \
-        }                 \
-    }
-#define RS_tx1(c)          \
-    while (1) {            \
-        if (!RS_Xbusy1) {  \
-            SBUF1 = c;     \
-            RS_Xbusy1 = 1; \
-            break;         \
-        }                  \
-    }
+#define UART_BUFFER_SIZE 512
 
-uint8_t RS_ready(void);
+void uart_init();
 
-uint8_t RS_rx(void);
+void uart0_isr() INTERRUPT(4);
+void uart1_isr() INTERRUPT(6);
 
-#ifdef EXTEND_BUF
-uint16_t RS_rx_len(void);
-#else
-uint8_t RS_rx_len(void);
-#endif
+uint8_t uart0_read(uint8_t *data);
+uint8_t uart0_write_byte(const uint8_t data);
+uint8_t uart0_write(const uint8_t *data, const uint8_t size);
 
-uint8_t RS_ready1(void);
+uint8_t uart1_read(uint8_t *data);
+uint8_t uart1_write_byte(const uint8_t data);
+uint8_t uart1_write(const uint8_t *data, const uint8_t size);
 
-/*
-#ifdef EXTEND_BUF1
-uint16_t RS_rx1_len(void);
-#else
-uint8_t RS_rx1_len(void);
-#endif
-*/
-
-uint8_t RS_rx1(void);
-
-extern volatile BIT_TYPE RS_Xbusy;
-extern XDATA_SEG uint8_t RS_buf[BUF_MAX];
-#ifdef EXTEND_BUF
-extern XDATA_SEG volatile uint16_t RS_in;
-extern XDATA_SEG volatile uint16_t RS_out;
-#else
-extern XDATA_SEG volatile uint8_t RS_in;
-extern XDATA_SEG volatile uint8_t RS_out;
-#endif
-
-extern volatile BIT_TYPE RS_Xbusy1;
-extern XDATA_SEG uint8_t RS_buf1[BUF1_MAX];
-#ifdef EXTEND_BUF1
-extern XDATA_SEG volatile uint16_t RS_in1;
-extern XDATA_SEG volatile uint16_t RS_out1;
-#else
-extern XDATA_SEG volatile uint8_t RS_in1;
-extern XDATA_SEG volatile uint8_t RS_out1;
-#endif
-
-#ifdef USE_SMARTAUDIO
-
-#define SUART_BUF_MAX 32 // has to be power of 2
-
-extern uint8_t suart_tx_en;
-void suart_txint();
-void suart_rxint();
-
-uint8_t SUART_ready();
-uint8_t SUART_rx();
-
-void SUART_tx(uint8_t *tbuf, uint8_t len);
-extern uint8_t SA_is_0;
-extern uint8_t SA_config;
-#endif // USE_SMARTAUDIO
+#define debug_uart_read CONCAT(DEBUG_UART, read)
+#define debug_uart_write_byte CONCAT(DEBUG_UART, write_byte)
+#define debug_uart_write CONCAT(DEBUG_UART, write)
 
 #endif /* __UART_H_ */

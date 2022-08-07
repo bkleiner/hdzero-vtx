@@ -1,8 +1,7 @@
-#ifndef __REGISTER_H_
-#define __REGISTER_H_
+#ifndef __MCU_H_
+#define __MCU_H_
 
 #include "stdint.h"
-
 #include "toolchain.h"
 
 #define REG_P0 0x80
@@ -14,9 +13,6 @@
 #define REG_IP 0xB8
 #define REG_SCON0 0x98
 #define REG_SCON1 0xC0
-
-////////////////////////////////////////////////////////////////////////////////
-// SFR
 
 SFR_DEF(P0, REG_P0); /* Port 0                    */
 SFR_DEF(SP, 0x81);   /* Stack Pointer             */
@@ -77,9 +73,6 @@ SFR_DEF(TA, 0xEB);
 SFR_DEF(B, 0xF0); /* B Working register        */
 
 SFR_DEF(EIP, 0xF8);
-
-////////////////////////////////////////////////////////////////////////////////
-// Bit define
 
 /*  P0  */
 SBIT_DEF(P0_7, REG_P0 ^ 7);
@@ -157,8 +150,8 @@ SBIT_DEF(SM2, REG_SCON0 ^ 5);
 SBIT_DEF(REN, REG_SCON0 ^ 4);
 SBIT_DEF(TB8, REG_SCON0 ^ 3);
 SBIT_DEF(RB8, REG_SCON0 ^ 2);
-SBIT_DEF(TI, REG_SCON0 ^ 1);
-SBIT_DEF(RI, REG_SCON0 ^ 0);
+SBIT_DEF(TI0, REG_SCON0 ^ 1);
+SBIT_DEF(RI0, REG_SCON0 ^ 0);
 
 /*  SCON1  */
 SBIT_DEF(SM10, REG_SCON1 ^ 7);
@@ -171,14 +164,11 @@ SBIT_DEF(TI1, REG_SCON1 ^ 1);
 SBIT_DEF(RI1, REG_SCON1 ^ 0);
 
 /*  EIF  */
-// SBIT_DEF(INT6F,    EIF^4);
-// SBIT_DEF(INT5F,    EIF^3);
-// SBIT_DEF(INT4F,    EIF^2);
-// SBIT_DEF(INT3F,    EIF^1);
-// SBIT_DEF(INT2F,    EIF^0);
-
-////////////////////////////////////////////////////////////////////////////////
-// Extended SFR
+// SBIT_DEF(INT6F, EIF ^ 4);
+// SBIT_DEF(INT5F, EIF ^ 3);
+// SBIT_DEF(INT4F, EIF ^ 2);
+// SBIT_DEF(INT3F, EIF ^ 1);
+// SBIT_DEF(INT2F, EIF ^ 0);
 
 SFR_DEF(SFR_CMD, 0xB9);
 SFR_DEF(SFR_DATA, 0xBA);
@@ -187,17 +177,12 @@ SFR_DEF(SFR_ADDRH, 0xBC);
 SFR_DEF(SFR_BUSY, 0xBD);
 SFR_DEF(DBG_PIN0, 0xFB);
 
-void WriteReg(uint8_t page, uint8_t addr, uint8_t dat);
-uint8_t ReadReg(uint8_t page, uint8_t addr);
+void mcu_init();
 
-void Write936x(uint16_t addr, uint8_t dat);
-uint8_t Read936x(uint16_t addr);
+void mcu_write_reg(uint8_t page, uint8_t addr, uint8_t dat);
+uint8_t mcu_read_reg(uint8_t page, uint8_t addr);
 
-/*
-void OSD_Mark_wr(uint16_t addr, uint8_t dat);
-void OSD_Map_wr(uint16_t addr, uint8_t dat);
-void OSD_CH_wr(uint16_t addr, uint8_t dat);
-*/
-void DP_tx(uint8_t dat);
+void ext0_isr() INTERRUPT(0);
+void ext1_isr() INTERRUPT(2);
 
-#endif /* __REGISTER_H_ */
+#endif /* __MCU_H_ */

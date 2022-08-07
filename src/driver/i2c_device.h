@@ -1,7 +1,7 @@
 #ifndef __I2C_DEVICE_H_
 #define __I2C_DEVICE_H_
 
-#include "common.h"
+#include "i2c.h"
 
 #define ADDR_MAX7315 0x20
 #define ADDR_PCA9554 0x38
@@ -12,15 +12,4 @@
 #define ADDR_TEMPADC 0x48
 #define ADDR_RUNCAM 0x21
 
-void Init_MAX7315(uint32_t val);
-#ifdef VTX_L
-void LED_TC3587_Init();
-#endif
-void Init_TC3587();
-
-extern uint8_t USE_MAX7315;
-extern uint8_t USE_PCA9554;
-
-#define ADDR_KEYBOARD (USE_MAX7315 ? ADDR_MAX7315 : ADDR_PCA9554)
-
-#endif
+#endif /* __I2C_DEVICE_H_ */

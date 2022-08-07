@@ -3,13 +3,12 @@
 
 #include <stdarg.h>
 
+#include "config.h"
+
 void _debugf(const char *fmt, ...);
 void _verbosef(const char *fmt, ...);
 
-void debug_monitor();
-#define debug_prompt() debugf("\r\nDM568X>")
-
-#ifdef _DEBUG_MODE
+#ifdef DEBUG_MODE
 #define debugf(args...) _debugf(args)
 #define verbosef(args...) _verbosef(args)
 #else

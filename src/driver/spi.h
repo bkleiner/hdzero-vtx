@@ -3,8 +3,9 @@
 
 #include "stdint.h"
 
-void SPI_Write(uint8_t trans, uint16_t addr, uint32_t dat_l);
-void SPI_Read(uint8_t trans, uint16_t addr, uint32_t *dat_l);
-void SPI_Init();
+void spi_init();
 
-#endif
+void spi_write(uint8_t trans, uint16_t addr, uint32_t data);
+void spi_read(uint8_t trans, uint16_t addr, uint32_t *data);
+
+#endif /* __SPI_H_ */

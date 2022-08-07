@@ -1,5 +1,5 @@
-#ifndef __TOOLCHAIN__H_
-#define __TOOLCHAIN__H_
+#ifndef __TOOLCHAIN_H_
+#define __TOOLCHAIN_H_
 
 #ifdef SDCC
 
@@ -13,6 +13,8 @@
 #define SBIT_DEF(name, loc) __sbit __at(loc) name
 
 #define INTERRUPT(num) __interrupt(num)
+
+#define NOP() __asm NOP __endasm
 
 #else // Keil
 
@@ -33,4 +35,4 @@
 
 #endif
 
-#endif
+#endif /* __TOOLCHAIN_H_ */
