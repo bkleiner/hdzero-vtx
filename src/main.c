@@ -44,7 +44,7 @@ void main(void) {
 
     camera_init();
 
-    video_pattern_init();
+    camera_detect();
     rf_init(0, 0);
 
     while (1) {

@@ -44,15 +44,23 @@ camera_mode_t camera_detect() {
         default:
             break;
         }
-
         time_delay_ms(100);
 
-        uint8_t status_reg = mcu_read_reg(0, 0x02);
-        status_reg = status_reg >> 4;
+        uint8_t loss = 0;
+        uint8_t status_reg = 0;
+        for (uint8_t tries = 0; tries < 5; tries++) {
+            status_reg = mcu_read_reg(0, 0x02);
+            status_reg = status_reg >> 4;
+            debugf("camera status_reg: %x\r\n", status_reg);
 
-        debugf("camera status_reg: %x\r\n", status_reg);
+            if (status_reg) {
+                loss = 1;
+                break;
+            }
+            time_delay_ms(5);
+        }
 
-        if (status_reg == 0) {
+        if (loss == 0) {
             return mode;
         }
     }
