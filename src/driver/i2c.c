@@ -190,9 +190,9 @@ uint16_t i2c_read16(uint8_t slave_addr, uint16_t reg_addr) {
     i2c_write_byte(slave_addr | 0x01);
 
     // data
-    temp = i2c_read_byte(1);
-    uint16_t value = temp;
     temp = i2c_read_byte(0);
+    uint16_t value = temp;
+    temp = i2c_read_byte(1);
     value = (value << 8) | temp;
     i2c_stop();
 
