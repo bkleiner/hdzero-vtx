@@ -10,6 +10,8 @@ dm6300_efuse_t efuse;
 uint32_t freq_cnt = 0;
 uint32_t freq_num[FREQ_MAX_EXT] = {0};
 
+int16_t aux_adc_offset = 0;
+
 uint8_t power_table[FREQ_MAX_EXT][POWER_MAX];
 
 const uint32_t freq_tab[FREQ_MAX_EXT] = {113200, 113900, 114700, 115400, 116100, 116780, 117560, 118280, 115200, 116000};
@@ -520,6 +522,39 @@ void dm6300_init_power_table() {
     }
 }
 
+void dm6300_init_aux_adc() {
+    spi_write(0x6, 0xFF0, 0x00000018);
+
+    uint32_t dat = 0;
+    spi_read(0x3, 0x254, &dat);
+
+    dat |= 0x200;
+    spi_write(0x3, 0x254, dat);
+
+    spi_write(0x6, 0xFF0, 0x00000019);
+    spi_write(0x3, 0x17C, 0x19);
+
+    spi_write(0x6, 0xFF0, 0x00000018);
+    spi_write(0x3, 0x2A0, 0xC05B55FE);
+    spi_write(0x6, 0xFF0, 0x00000019);
+    spi_read(0x3, 0x17C, &dat);
+    int16_t dat1 = ((int32_t)dat) >> 20;
+
+    spi_write(0x6, 0xFF0, 0x00000018);
+    spi_write(0x3, 0x2A0, 0x305B55FE);
+    spi_write(0x6, 0xFF0, 0x00000019);
+    spi_read(0x3, 0x17C, &dat);
+    int16_t dat2 = ((int32_t)dat) >> 20;
+
+    spi_write(0x6, 0xFF0, 0x00000018);
+    spi_write(0x3, 0x2A0, 0xA05B51FE);
+    spi_write(0x6, 0xFF0, 0x00000019);
+    spi_read(0x3, 0x17C, &dat);
+    int16_t dat3 = ((int32_t)dat) >> 20;
+
+    aux_adc_offset = dat3 - ((dat1 + dat2) >> 1);
+}
+
 void dm6300_init(uint8_t ch) {
     debugf("dm6300 init\r\n");
 
@@ -565,6 +600,22 @@ void dm6300_init(uint8_t ch) {
     dm6300_configure_efuse();
 
     dm6300_init_power_table();
+
+    dm6300_init_aux_adc();
+
+    // init temp sensor
+    spi_write(0x6, 0xFF0, 0x00000018);
+    spi_write(0x3, 0x2C0, 0x00000100);
+    spi_write(0x3, 0x2A0, 0xA04005FE);
+}
+
+int16_t dm6300_get_temp() {
+    spi_write(0x6, 0xFF0, 0x00000019);
+
+    uint32_t dat;
+    spi_read(0x3, 0x17C, &dat);
+
+    return (((int32_t)dat) >> 20) + aux_adc_offset;
 }
 
 void dm6300_set_power(uint8_t pwr, uint8_t ch, uint8_t offset) {

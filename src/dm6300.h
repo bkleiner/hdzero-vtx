@@ -72,5 +72,6 @@ typedef union {
 void dm6300_init(uint8_t ch);
 void dm6300_set_channel(uint8_t ch);
 void dm6300_set_power(uint8_t pwr, uint8_t ch, uint8_t offset);
+int16_t dm6300_get_temp();
 
 #endif /* __DM6300_H_ */
