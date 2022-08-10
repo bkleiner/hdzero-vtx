@@ -8,24 +8,11 @@
 
 #include "camera.h"
 #include "debug.h"
+#include "display_port.h"
 #include "dm6300.h"
 #include "eeprom.h"
-
-void video_pattern_init() {
-    mcu_set_720p60();
-    mcu_write_reg(0, 0x50, 0x01);
-}
-
-void rf_init(uint8_t channel, uint8_t power) {
-    mcu_write_reg(0, 0x8F, 0x00);
-    mcu_write_reg(0, 0x8F, 0x01);
-
-    dm6300_init(channel);
-    dm6300_set_channel(channel);
-    dm6300_set_power(power, channel, 0);
-
-    mcu_write_reg(0, 0x8F, 0x11);
-}
+#include "osd.h"
+#include "vtx.h"
 
 void main(void) {
     mcu_init();
@@ -43,11 +30,18 @@ void main(void) {
     eeprom_load();
 
     camera_init();
+    vtx_state.cam_mode = camera_detect();
 
-    camera_detect();
-    rf_init(eeprom->vtx.frequency, eeprom->vtx.power);
+    display_port_init();
+    osd_init();
+
+    vtx_rf_init(eeprom->vtx.frequency, eeprom->vtx.power);
 
     while (1) {
-        time_delay_ms(500);
+        timer_task();
+
+        osd_task();
+
+        display_port_task();
     }
 }

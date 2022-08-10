@@ -1,6 +1,9 @@
 #ifndef __CONFIG_H_
 #define __CONFIG_H_
 
+#define VERSION 0x41
+#define BETA 0x03
+
 #define DEBUG_MODE
 //#define REVERSE_UARTS
 
@@ -55,5 +58,27 @@
 
 #define SCL P0_0
 #define SDA P0_1
+
+// ------ ids ------
+#define VTX_B_ID 0x4C
+#define VTX_M_ID 0x50
+#define VTX_S_ID 0x54
+#define VTX_R_ID 0x58
+#define VTX_WL_ID 0x59
+#define VTX_L_ID 0x5C
+
+#if defined(VTX_B)
+#define VTX_ID VTX_B_ID
+#elif defined(VTX_M)
+#define VTX_ID VTX_M_ID
+#elif defined(VTX_S)
+#define VTX_ID VTX_S_ID
+#elif defined(VTX_R)
+#define VTX_ID VTX_R_ID
+#elif defined(VTX_WL)
+#define VTX_ID VTX_WL_ID
+#elif defined(VTX_L)
+#define VTX_ID VTX_L_ID
+#endif
 
 #endif /* __CONFIG_H_ */
