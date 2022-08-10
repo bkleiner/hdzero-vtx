@@ -27,4 +27,8 @@ uint8_t uart1_write(const uint8_t *data, const uint8_t size);
 #define debug_uart_write_byte CONCAT(DEBUG_UART, write_byte)
 #define debug_uart_write CONCAT(DEBUG_UART, write)
 
+#define msp_uart_read CONCAT(MSP_UART, read)
+#define msp_uart_write_byte CONCAT(MSP_UART, write_byte)
+#define msp_uart_write CONCAT(MSP_UART, write)
+
 #endif /* __UART_H_ */
