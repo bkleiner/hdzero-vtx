@@ -22,8 +22,9 @@ void mcu_init() {
     CKCON = 0x1F; // [4]   timer1 uses a divide-by-N of the system clock frequency. 0:N=12; 1:N=4
                   // [3]   timer0 uses a divide-by-N of the system clock frequency. 0:N=12; 1:N=4
 
-    TH0 = 139;
-    TL0 = 0;
+    TH0 = 0x6E; // timer in mode 0x1 with N=4 => 148.5 / 4 = 37125khz
+    TL0 = 0xFB; // 16bit timer 0xffff - 37125 = 0x6EFB
+                // 37125khz / 37125 = 1000hz
 
     TH1 = 0xEC; // [7:0] in timer mode 0x10:   ----------------->> 148.5MHz: 0x87; 100MHz: 0xAF; 54MHz: 0xD4; 27MHz: 0xEA
                 //	               f(clk)

@@ -4,9 +4,14 @@
 #include "stdint.h"
 #include "toolchain.h"
 
-void time_delay_ms(uint16_t ms);
+extern volatile IDATA_SEG uint32_t timer_ms;
+extern BIT_TYPE timer_8hz;
 
 void timer0_isr() INTERRUPT(1);
 void timer1_isr() INTERRUPT(3);
+
+void timer_task();
+
+void time_delay_ms(uint16_t ms);
 
 #endif /* __TIME_H_ */
