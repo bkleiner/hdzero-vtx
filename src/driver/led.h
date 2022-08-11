@@ -1,5 +1,5 @@
-#ifndef __LED_H_
-#define __LED_H_
+#ifndef __DRIVER_LED_H_
+#define __DRIVER_LED_H_
 
 #include "config.h"
 #include "mcu.h"
@@ -9,4 +9,4 @@
 
 #define LED_BLUE_TOGGLE LED_1_PIN = !LED_1_PIN
 
-#endif /* __LED_H_ */
+#endif /* __DRIVER_LED_H_ */

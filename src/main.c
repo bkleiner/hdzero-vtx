@@ -25,6 +25,7 @@ void main(void) {
 
     spi_init();
     i2c_init();
+    led_init();
 
     eeprom_init();
     eeprom_load();
@@ -40,6 +41,7 @@ void main(void) {
     while (1) {
         timer_task();
 
+        led_task();
         osd_task();
 
         display_port_task();
