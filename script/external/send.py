@@ -45,6 +45,7 @@ def do_send(port, file):
             raise Exception("Flash failed!")
 
         dbg_print(ser.readline().decode().rstrip())
+        dbg_print(ser.readline().decode().rstrip())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
