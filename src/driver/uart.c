@@ -26,9 +26,10 @@ void uart_init() {
 void uart0_isr() INTERRUPT(4) {
     if (RI0) {
         RI0 = 0;
-        if (uart0_rx_head != uart0_rx_tail) {
+        const uint16_t next = (uart0_rx_head + 1) % UART_BUFFER_SIZE;
+        if (next != uart0_rx_tail) {
             uart0_rx_buf[uart0_rx_head] = SBUF0;
-            uart0_rx_head = (uart0_rx_head + 1) % UART_BUFFER_SIZE;
+            uart0_rx_head = next;
         }
     }
 
@@ -46,9 +47,10 @@ void uart0_isr() INTERRUPT(4) {
 void uart1_isr() INTERRUPT(6) {
     if (RI1) {
         RI1 = 0;
-        if (uart1_rx_head != uart1_rx_tail) {
+        const uint16_t next = (uart1_rx_head + 1) % UART_BUFFER_SIZE;
+        if (next != uart1_rx_tail) {
             uart1_rx_buf[uart1_rx_head] = SBUF1;
-            uart1_rx_head = (uart1_rx_head + 1) % UART_BUFFER_SIZE;
+            uart1_rx_head = next;
         }
     }
 
