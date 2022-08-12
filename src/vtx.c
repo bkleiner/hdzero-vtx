@@ -8,6 +8,7 @@ vtx_state_t vtx_state = {
     .cam_mode = CAM_MODE_INVALID,
     .msp_variant = {'B', 'T', 'F', 'L'},
     .font_type = 0,
+    .resolution = SD_3016,
 };
 
 void vtx_pattern_init() {

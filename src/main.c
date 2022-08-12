@@ -11,6 +11,8 @@
 #include "display_port.h"
 #include "dm6300.h"
 #include "eeprom.h"
+#include "led.h"
+#include "msp.h"
 #include "osd.h"
 #include "vtx.h"
 
@@ -35,6 +37,7 @@ void main(void) {
 
     display_port_init();
     osd_init();
+    msp_init();
 
     vtx_rf_init(eeprom->vtx.frequency, eeprom->vtx.power);
 
@@ -42,6 +45,7 @@ void main(void) {
         timer_task();
 
         led_task();
+        msp_task();
         osd_task();
 
         display_port_task();
