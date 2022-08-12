@@ -623,7 +623,7 @@ void dm6300_set_power(uint8_t pwr, uint8_t ch, uint8_t offset) {
         ch = 0;
     }
 
-    debugf("\r\ndm6300_set_power: %d ch: %d offset: %d", pwr, ch, offset);
+    debugf("dm6300_set_power: %d ch: %d offset: %d\r\n", pwr, ch, offset);
 
     spi_write(0x6, 0xFF0, 0x00000018);
 
