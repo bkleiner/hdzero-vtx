@@ -14,44 +14,23 @@
 #define BUF1_MAX 255 // 30
 #endif
 
-#define RS_tx(c)          \
-    while (1) {           \
-        if (!RS_Xbusy) {  \
-            SBUF0 = c;    \
-            RS_Xbusy = 1; \
-            break;        \
-        }                 \
-    }
-#define RS_tx1(c)          \
-    while (1) {            \
-        if (!RS_Xbusy1) {  \
-            SBUF1 = c;     \
-            RS_Xbusy1 = 1; \
-            break;         \
-        }                  \
-    }
-
-uint8_t RS_ready(void);
-
-uint8_t RS_rx(void);
-
+uint8_t RS_ready();
+uint8_t RS_rx();
+void RS_tx(uint8_t c);
 #ifdef EXTEND_BUF
-uint16_t RS_rx_len(void);
+uint16_t RS_rx_len();
 #else
-uint8_t RS_rx_len(void);
+uint8_t RS_rx_len();
 #endif
 
-uint8_t RS_ready1(void);
-
-/*
+uint8_t RS_ready1();
+uint8_t RS_rx1();
+void RS_tx1(uint8_t c);
 #ifdef EXTEND_BUF1
-uint16_t RS_rx1_len(void);
+uint16_t RS_rx1_len();
 #else
-uint8_t RS_rx1_len(void);
+uint8_t RS_rx1_len();
 #endif
-*/
-
-uint8_t RS_rx1(void);
 
 extern volatile BIT_TYPE RS_Xbusy;
 extern XDATA_SEG uint8_t RS_buf[BUF_MAX];

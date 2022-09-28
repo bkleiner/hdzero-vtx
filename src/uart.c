@@ -44,6 +44,14 @@ uint8_t RS_rx(void) {
     return ret;
 }
 
+void RS_tx(uint8_t c) {
+    while (RS_Xbusy)
+        ;
+
+    RS_Xbusy = 1;
+    SBUF0 = c;
+}
+
 #ifdef EXTEND_BUF
 uint16_t RS_rx_len(void)
 #else
@@ -72,6 +80,14 @@ uint8_t RS_rx1(void) {
         RS_out1 = 0;
 
     return ret;
+}
+
+void RS_tx1(uint8_t c) {
+    while (RS_Xbusy1)
+        ;
+
+    RS_Xbusy1 = 1;
+    SBUF1 = c;
 }
 
 /*
