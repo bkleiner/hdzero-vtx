@@ -155,22 +155,64 @@ void msp_task() {
     set_vtx_param();
 }
 
+uint8_t msp_handle_cmd(uint16_t cmd, uint16_t payload_len) {
+    uint8_t ret = 0;
+
+    switch (cmd) {
+    case MSP_CMD_FC_VARIANT:
+        parse_variant();
+        break;
+
+    case MSP_CMD_STATUS_BYTE:
+        parse_status();
+        break;
+
+    case MSP_CMD_RC_BYTE:
+        parse_rc();
+        break;
+
+    case MSP_CMD_DISPLAYPORT_BYTE:
+        ret = parse_displayport(payload_len);
+        break;
+
+    case MSP_CMD_VTX_CONFIG:
+        parse_vtx_config();
+        break;
+
+    default:
+        // unknown command do nothing
+        break;
+    }
+
+    if ((fc_lock & FC_VARIANT_LOCK) && (fc_lock & FC_VTX_CONFIG_LOCK) && !(fc_lock & FC_INIT_VTX_TABLE_LOCK)) {
+        fc_lock |= FC_INIT_VTX_TABLE_LOCK;
+        if (fc_variant[0] == 'B' && fc_variant[1] == 'T' && fc_variant[2] == 'F' && fc_variant[3] == 'L') {
+#ifdef INIT_VTX_TABLE
+            InitVtxTable();
+#endif
+        }
+    }
+
+    return ret;
+}
+
 uint8_t msp_read_one_frame() {
     static uint8_t state = MSP_HEADER_START;
-    static uint8_t cur_cmd = CUR_OTHERS;
-    static uint8_t length, osd_len;
     static uint8_t ptr = 0; // write ptr of msp_rx_buf
     static uint8_t crc = 0;
-    static uint16_t cmd_u16 = 0;
-    static uint16_t len_u16 = 0;
 
-    uint8_t i, ret, full_frame, rx;
+    static uint16_t cmd = 0;
+    static uint16_t length = 0;
+    static uint16_t payload_len = 0;
 
-    ret = 0;
-    full_frame = 0;
+    uint8_t ret = 0;
+    uint8_t full_frame = 0;
+    uint8_t i, rx;
+
     for (i = 0; i < 16; i++) {
         if ((!CMS_ready()) || full_frame)
             return ret;
+
         rx = CMS_rx();
 
         switch (state) {
@@ -207,29 +249,18 @@ uint8_t msp_read_one_frame() {
             crc = rx;
             state = MSP_CMD;
             length = rx;
-            osd_len = rx - 4;
+            payload_len = length - 4;
             break;
 
         case MSP_CMD:
             crc ^= rx;
+            cmd = rx;
+            ptr = 0;
             if (length == 0) {
-                cur_cmd = CUR_OTHERS;
                 state = MSP_CRC1;
             } else {
-                if (rx == MSP_CMD_DISPLAYPORT_BYTE) {
-                    cur_cmd = CUR_DISPLAYPORT;
-                } else if (rx == MSP_CMD_RC_BYTE) {
-                    cur_cmd = CUR_RC;
-                } else if (rx == MSP_CMD_STATUS_BYTE) {
-                    cur_cmd = CUR_STATUS;
-                } else if (rx == MSP_CMD_FC_VARIANT) {
-                    cur_cmd = CUR_FC_VARIANT;
-                } else if (rx == MSP_CMD_VTX_CONFIG) {
-                    cur_cmd = CUR_VTX_CONFIG;
-                }
                 state = MSP_RX1;
             }
-            // debugf("\r\n%x ",(uint16_t)rx);
             break;
 
         case MSP_RX1:
@@ -243,30 +274,14 @@ uint8_t msp_read_one_frame() {
 
         case MSP_CRC1:
             if (rx == crc) {
-                if (cur_cmd == CUR_STATUS)
-                    parse_status();
-                else if (cur_cmd == CUR_RC)
-                    parse_rc();
-                else if (cur_cmd == CUR_FC_VARIANT)
-                    parse_variant();
-                else if (cur_cmd == CUR_VTX_CONFIG)
-                    parse_vtx_config();
-                else if (cur_cmd == CUR_DISPLAYPORT)
-                    ret = parse_displayport(osd_len);
-                full_frame = 1;
-#ifdef INIT_VTX_TABLE
-                if (fc_lock & FC_VTX_CONFIG_LOCK && !(fc_lock & FC_INIT_VTX_TABLE_LOCK) && fc_lock & FC_VARIANT_LOCK) {
-                    fc_lock |= FC_INIT_VTX_TABLE_LOCK;
-                    if (msp_cmp_fc_variant("BTFL") || msp_cmp_fc_variant("QUIC")) {
-                        InitVtxTable();
-                    }
-                }
-#endif
+                ret = msp_handle_cmd(cmd, payload_len);
             }
 #ifdef _DEBUG_DISPLAYPORT
-            else
+            else {
                 _outchar('^');
+            }
 #endif
+            full_frame = 1;
             state = MSP_HEADER_START;
             break;
 
@@ -289,25 +304,26 @@ uint8_t msp_read_one_frame() {
 
         case MSP_CMD_L:
             crc = crc8tab[crc ^ rx];
-            cmd_u16 = rx;
+            cmd = rx;
             state = MSP_CMD_H;
             break;
 
         case MSP_CMD_H:
             crc = crc8tab[crc ^ rx];
-            cmd_u16 += ((uint16_t)rx << 8);
+            cmd += ((uint16_t)rx << 8);
             state = MSP_LEN_L;
             break;
 
         case MSP_LEN_L:
             crc = crc8tab[crc ^ rx];
-            len_u16 = rx;
+            length = rx;
             state = MSP_LEN_H;
             break;
 
         case MSP_LEN_H:
             crc = crc8tab[crc ^ rx];
-            len_u16 += ((uint16_t)rx << 8);
+            length += ((uint16_t)rx << 8);
+            payload_len = length;
             ptr = 0;
             state = MSP_RX2;
             break;
@@ -316,22 +332,24 @@ uint8_t msp_read_one_frame() {
             crc = crc8tab[crc ^ rx];
             msp_rx_buf[ptr++] = rx;
             ptr &= 63;
-            len_u16--;
-            if (len_u16 == 0)
+            length--;
+            if (length == 0)
                 state = MSP_CRC2;
             break;
 
         case MSP_CRC2:
-            if (crc == rx)
-                parseMspVtx_V2(cmd_u16);
+            if (crc == rx) {
+                ret = msp_handle_cmd(cmd, payload_len);
+            }
+#ifdef _DEBUG_MODE
+            debugf("\r\ncrc : %x,%x", (uint16_t)crc, (uint16_t)rx);
+#endif
+            full_frame = 1;
             state = MSP_HEADER_START;
             break;
+        }
+    }
 
-        default:
-            state = MSP_HEADER_START;
-            break;
-        } // switch(state)
-    }     // i
     return ret;
 }
 
@@ -786,25 +804,8 @@ void parse_rc() {
     throttle_d = throttle;
     */
 }
+
 void parse_vtx_config() {
-    uint8_t nxt_ch = 0;
-    uint8_t nxt_pwr = 0;
-    uint8_t pit_update = 0;
-    uint8_t needSaveEEP = 0;
-
-    if (!(fc_lock & FC_VTX_CONFIG_LOCK))
-        fc_lock |= FC_VTX_CONFIG_LOCK;
-
-    if (!msp_cmp_fc_variant("BTFL") && !msp_cmp_fc_variant("EMUF") && !msp_cmp_fc_variant("QUIC")) {
-        return;
-    }
-
-    fc_pwr_rx = msp_rx_buf[3] - 1;
-    if (fc_pwr_rx > POWER_MAX + 2)
-        fc_pwr_rx = 0;
-}
-
-void parseMspVtx_V2(uint16_t cmd_u16) {
     uint8_t nxt_ch = 0;
     uint8_t nxt_pwr = 0;
     uint8_t pit_update = 0;
@@ -813,11 +814,13 @@ void parseMspVtx_V2(uint16_t cmd_u16) {
     static uint8_t last_lp = 255;
     static uint8_t last_pit = 255;
 
-    if (cmd_u16 != MSP_CMD_VTX_CONFIG)
-        return;
+    if (!(fc_lock & FC_VTX_CONFIG_LOCK)) {
+        fc_lock |= FC_VTX_CONFIG_LOCK;
+    }
 
-    if (!(fc_lock & FC_VTX_CONFIG_LOCK))
+    if (!msp_cmp_fc_variant("BTFL") && !msp_cmp_fc_variant("EMUF") && !msp_cmp_fc_variant("QUIC")) {
         return;
+    }
 
     fc_band_rx = msp_rx_buf[1];
     fc_channel_rx = msp_rx_buf[2];
